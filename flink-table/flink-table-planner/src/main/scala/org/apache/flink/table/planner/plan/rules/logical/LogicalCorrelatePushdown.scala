@@ -48,19 +48,11 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val cor: LogicalCorrelate = call.rel(0)
-
     val projLeft: LogicalProject = call.rel(1)
-    val tableScan: LogicalTableScan = call.rel(2)
-    val projRight: LogicalProject = call.rel(3)
-    val funcScan: LogicalTableFunctionScan = call.rel(4)
+    val funcScan: LogicalTableFunctionScan = call.rel(3)
 
-
-    var i = -1
-    val projectsAll = projLeft.getProjects.asScala.map(expr => {
-      i += 1;
-      new RexInputRef(i, expr.getType)
-    })
-    val tsProjects = Seq[RexNode](projectsAll.last).asJava
+    val newProjExprs = projLeft.getProjects.asScala.zipWithIndex.map( exprWithIdx => new RexInputRef(exprWithIdx._2, exprWithIdx._1.getType))
+    val funcScanProjExprs = Seq[RexNode](newProjExprs.last).asJava
     val cluster = cor.getCluster
     val sqlFunction =
       BridgingSqlFunction.of(cluster, BuiltInFunctionDefinitions.INTERNAL_UNNEST_ROWS)
@@ -68,7 +60,7 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
     val rexCall = cluster.getRexBuilder.makeCall(
       funcScan.getRowType,
       sqlFunction,
-      tsProjects
+      funcScanProjExprs
     )
 
     val newScan = new LogicalTableFunctionScan(
@@ -79,22 +71,15 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
       funcScan.getElementType,
       rexCall.getType,
       funcScan.getColumnMappings)
-
-
     val newCor = cor.copy(cor.getTraitSet, projLeft, newScan, cor.getCorrelationId, cor.getRequiredColumns, cor.getJoinType)
-
-
-    val newProj: LogicalProject = new LogicalProject(cor.getCluster, cor.getTraitSet, Collections.emptyList[RelHint](), newCor, projectsAll.asJava, cor.getRowType )
-    val ss = newProj.getRowType
-    val s = cor.getRowType
-    val s2 = newCor.getRowType
+    val newProj: LogicalProject = new LogicalProject(cor.getCluster, cor.getTraitSet, Collections.emptyList[RelHint](), newCor, newProjExprs.asJava, cor.getRowType )
     call.transformTo(newProj)
   }
 }
 
 object LogicalCorrelatePushdown {
   val INSTANCE = new LogicalCorrelatePushdown(operand(classOf[LogicalCorrelate],
-                                                      operand(classOf[LogicalProject], operand(classOf[LogicalTableScan], any)),
+                                                      operand(classOf[LogicalProject], any),
                                                       operand(classOf[LogicalProject], operand(classOf[LogicalTableFunctionScan], any))
                                               ), "LogicalUnnestRule")
 }
