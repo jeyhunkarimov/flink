@@ -121,7 +121,9 @@ object FlinkBatchRuleSets {
         // unnest rule
         LogicalUnnestRule.INSTANCE,
         // Wrap arguments for JSON aggregate functions
-        WrapJsonAggFunctionArgumentsRule.INSTANCE
+        WrapJsonAggFunctionArgumentsRule.INSTANCE,
+        CoreRules.PROJECT_CORRELATE_TRANSPOSE,
+        LogicalCorrelatePushdown.INSTANCE
       )).asJava)
 
   /** RuleSet about filter */
