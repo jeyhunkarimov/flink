@@ -23,7 +23,6 @@ import org.apache.flink.table.planner.functions.bridging.BridgingSqlFunction
 import org.apache.flink.table.planner.utils.ShortcutUtils
 import org.apache.flink.table.runtime.functions.table.UnnestRowsFunction
 import org.apache.flink.table.types.logical.utils.LogicalTypeUtils.toRowType
-
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.plan.RelOptRule._
@@ -31,6 +30,7 @@ import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.Uncollect
 import org.apache.calcite.rel.logical._
+import org.apache.flink.table.planner.plan.utils.CorrelateUtil
 
 import java.util.Collections
 
@@ -44,22 +44,22 @@ class LogicalUnnestRule(operand: RelOptRuleOperand, description: String)
 
   override def matches(call: RelOptRuleCall): Boolean = {
     val join: LogicalCorrelate = call.rel(0)
-    val right = getRel(join.getRight)
+    val right = CorrelateUtil.getRel(join.getRight)
 
     right match {
       // a filter is pushed above the table function
       case filter: LogicalFilter =>
-        getRel(filter.getInput) match {
+        CorrelateUtil.getRel(filter.getInput) match {
           case u: Uncollect => !u.withOrdinality
           case p: LogicalProject =>
-            getRel(p.getInput) match {
+            CorrelateUtil.getRel(p.getInput) match {
               case u: Uncollect => !u.withOrdinality
               case _ => false
             }
           case _ => false
         }
       case project: LogicalProject =>
-        getRel(project.getInput) match {
+        CorrelateUtil.getRel(project.getInput) match {
           case u: Uncollect => !u.withOrdinality
           case _ => false
         }
@@ -70,19 +70,19 @@ class LogicalUnnestRule(operand: RelOptRuleOperand, description: String)
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val correlate: LogicalCorrelate = call.rel(0)
-    val outer = getRel(correlate.getLeft)
-    val array = getRel(correlate.getRight)
+    val outer = CorrelateUtil.getRel(correlate.getLeft)
+    val array = CorrelateUtil.getRel(correlate.getRight)
 
     def convert(relNode: RelNode): RelNode = {
       relNode match {
         case rs: HepRelVertex =>
-          convert(getRel(rs))
+          convert(CorrelateUtil.getRel(rs))
 
         case f: LogicalProject =>
-          f.copy(f.getTraitSet, ImmutableList.of(convert(getRel(f.getInput))))
+          f.copy(f.getTraitSet, ImmutableList.of(convert(CorrelateUtil.getRel(f.getInput))))
 
         case f: LogicalFilter =>
-          f.copy(f.getTraitSet, ImmutableList.of(convert(getRel(f.getInput))))
+          f.copy(f.getTraitSet, ImmutableList.of(convert(CorrelateUtil.getRel(f.getInput))))
 
         case uc: Uncollect =>
           // convert Uncollect into TableFunctionScan
@@ -98,7 +98,7 @@ class LogicalUnnestRule(operand: RelOptRuleOperand, description: String)
             typeFactory.createFieldTypeFromLogicalType(
               toRowType(UnnestRowsFunction.getUnnestedType(logicalType))),
             sqlFunction,
-            getRel(uc.getInput).asInstanceOf[LogicalProject].getProjects
+            CorrelateUtil.getRel(uc.getInput).asInstanceOf[LogicalProject].getProjects
           )
 
           new LogicalTableFunctionScan(
@@ -120,12 +120,6 @@ class LogicalUnnestRule(operand: RelOptRuleOperand, description: String)
     call.transformTo(newCorrelate)
   }
 
-  private def getRel(rel: RelNode): RelNode = {
-    rel match {
-      case vertex: HepRelVertex => vertex.getCurrentRel
-      case _ => rel
-    }
-  }
 }
 
 object LogicalUnnestRule {
