@@ -28,6 +28,7 @@ import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.plan.RelOptRule._
 import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.rel.RelNode
+import org.apache.calcite.rel.`type`.RelDataTypeField
 import org.apache.calcite.rel.core.Uncollect
 import org.apache.calcite.rel.hint.RelHint
 import org.apache.calcite.rel.logical._
@@ -50,55 +51,34 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
 
 
   override def matches(call: RelOptRuleCall): Boolean = {
-    LogicalCorrelatePushdown.TT += 1
-    if (LogicalCorrelatePushdown.TT ==  1 || LogicalCorrelatePushdown.TT == 3) {
-      return true
-    } else {
-      return false
-    }
+    val projLeft: LogicalProject = call.rel(1)
+    val funcScan: LogicalTableFunctionScan = call.rel(3)
+
+    val refExprs = deriveRequiredFields(funcScan.getCall, projLeft).getOrElse(return false)
+    val targetExprs = projLeft.getRowType.getFieldList.asScala
+
+    val matchAll = refExprs.map(expr => {
+
+      val refIdx = expr.getIndex
+      val refName = expr.getName
+      if (refIdx < targetExprs.size && targetExprs(refIdx).getName.eq(refName)) false else true
+    }).forall(b => b)
+
+    matchAll
   }
 
   override def onMatch(call: RelOptRuleCall): Unit = {
     val cor: LogicalCorrelate = call.rel(0)
     val projLeft: LogicalProject = call.rel(1)
-    //    val tableScan: LogicalTableScan = call.rel(2)
     val projRight: LogicalProject = call.rel(2)
     val funcScan: LogicalTableFunctionScan = call.rel(3)
 
-    val isTableScan = CorrelateUtil.getRel(projLeft.getInput(0)).isInstanceOf[LogicalTableScan]
-
     def getInputRefs(logicalProject: LogicalProject) : Seq[RexInputRef] = logicalProject.getProjects.asScala.filter(expr => expr.isInstanceOf[RexInputRef]).asInstanceOf[Seq[RexInputRef]]
 
-    def deriveFuncScanIndexes(rexNode: RexNode) : Option[Seq[Int]] = {
-      rexNode match {
-        case rx: RexCall =>
-          val operands = rx.getOperands
-          val res = operands.asScala.filter(op => op.isInstanceOf[RexFieldAccess]).map {
-            op => op.asInstanceOf[RexFieldAccess].getField.getIndex
-          }
-          Some(res)
-        case _ => None
-      }
-    }
-
-    val funcScanFieldIndexes = deriveFuncScanIndexes(funcScan.getCall).getOrElse(return)
-    val leafProf = findLeafProjectOp(cor).getOrElse(return)
-    val leafProjExprs = getInputRefs(leafProf)
-    val leftProjExprs = getInputRefs(projLeft)
-
-    val projMap = if (isTableScan) {
-      Map(leafProjExprs.zipWithIndex.map {exprWithIdx =>
-        (exprWithIdx._1.getIndex, new RexInputRef(exprWithIdx._2, exprWithIdx._1.getType))
-      } : _*)
-    }
-    else {
-      Map(funcScanFieldIndexes.zipWithIndex.map { exprWithIdx => {
-        val idx =  leftProjExprs.size - exprWithIdx._2 - 1
-        (exprWithIdx._1, new RexInputRef(idx, leftProjExprs(idx).getType))
-      }
-      }: _*)
-    }
-    val newFuncScanProjExprs: Seq[RexNode] = funcScanFieldIndexes.map(idx => projMap(idx))
+    val requiredFields = deriveRequiredFields(funcScan.getCall, projLeft).getOrElse(return)
+    val targetExprIndexes = requiredFields.map(field => projLeft.getRowType.getFieldList.asScala.indexWhere(pfield => pfield.getType.eq(field.getType)))
+    val targetExprFlatten = getInputRefs(projLeft).zipWithIndex.map(exprWithIdx => new RexInputRef(exprWithIdx._2, exprWithIdx._1.getType))
+    val newFuncScanProjExprs: Seq[RexNode] = targetExprIndexes.map(idx => targetExprFlatten(idx))
 
     val cluster = cor.getCluster
     val sqlFunction =
@@ -109,7 +89,7 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
       sqlFunction,
       newFuncScanProjExprs.asJava
     )
-    //    val ds = funcScan.getCall.asInstanceOf[RexCall].getOperands.get(0).asInstanceOf[RexFieldAccess].getField.getIndex
+
     val newScan = new LogicalTableFunctionScan(
       cluster,
       cor.getTraitSet,
@@ -121,24 +101,64 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
 
     val newProjRight: LogicalProject = projRight.copy(projRight.getTraitSet, newScan, projRight.getProjects, projRight.getRowType)
     val newCor = cor.copy(cor.getTraitSet, projLeft, newProjRight, cor.getCorrelationId, cor.getRequiredColumns, cor.getJoinType)
-    //    val projIndexes = leftProjExprs.zipWithIndex.map(exprWithIndex => new RexInputRef(exprWithIndex._2, exprWithIndex._1.getType).asInstanceOf[RexNode]).asJava
-    //    val newProjTop: LogicalProject = LogicalProject.create(newCor, projLeft.getHints, projIndexes, cor.getRowType)
 
     call.transformTo(newCor)
   }
 
-  private def findLeafProjectOp(root: RelNode) : Option[LogicalProject] = {
-    root match {
-      case vertex: HepRelVertex => findLeafProjectOp(vertex.getCurrentRel)
-      case project: LogicalProject if CorrelateUtil.getRel(project.getInput(0)).isInstanceOf[LogicalTableScan] =>
-        Some(project)
-      case _ => if (root.getInputs.isEmpty) {
-        None
-      } else {
-        findLeafProjectOp(root.getInput(0))
-      }
+  private def deriveRequiredFields(rexNode: RexNode, projLeft: LogicalProject): Option[Seq[RelDataTypeField]] = {
+    rexNode match {
+      case rx: RexCall =>
+        val operands = rx.getOperands
+        val res = operands.asScala.map {
+          case exprAccess: RexFieldAccess  => Some(exprAccess.getField)
+          case exprRef: RexInputRef  => {
+            val fieldIndex = exprRef.getIndex
+            val projExprs = projLeft.getRowType.getFieldList
+            if (fieldIndex < projExprs.size()) Some(projExprs.get(fieldIndex)) else None
+          }
+          case _ => None
+        }
+        val withValues = res.forall(_.isDefined)
+        if (withValues) Some(res.map(r => r.get)) else None
+      case _ => None
     }
   }
+
+//  private def deriveTargetExprs(requiredFields: Seq[RelDataTypeField], projLeft: LogicalProject): Option[Seq[RelDataTypeField]] = {
+//    val isTableScan = CorrelateUtil.getRel(projLeft.getInput(0)).isInstanceOf[LogicalTableScan]
+//
+//    val refFieldsWithoutProjection = (CorrelateUtil.getRel(projLeft.getInput(0)) match {
+//      case ts: LogicalTableScan => Some(ts.getRowType.getFieldList)
+//      case cor: LogicalCorrelate => Some(cor.getRowType.getFieldList)
+//      case _ => None
+//    }).getOrElse(return None)
+//
+//    val refFieldsWithProjection = projLeft.getRowType.getFieldList
+//
+//
+//
+//
+//
+//
+//
+//    if (isTableScan) {
+//
+//    }
+//    None
+//  }
+
+  //  private def findLeafProjectOp(root: RelNode) : Option[LogicalProject] = {
+//    root match {
+//      case vertex: HepRelVertex => findLeafProjectOp(vertex.getCurrentRel)
+//      case project: LogicalProject if CorrelateUtil.getRel(project.getInput(0)).isInstanceOf[LogicalTableScan] =>
+//        Some(project)
+//      case _ => if (root.getInputs.isEmpty) {
+//        None
+//      } else {
+//        findLeafProjectOp(root.getInput(0))
+//      }
+//    }
+//  }
 }
 
 object LogicalCorrelatePushdown {
@@ -146,5 +166,4 @@ object LogicalCorrelatePushdown {
     operand(classOf[LogicalProject], any),
     operand(classOf[LogicalProject], operand(classOf[LogicalTableFunctionScan], any))
   ), "LogicalCorrelatePushdown")
-  var TT = 0
 }
