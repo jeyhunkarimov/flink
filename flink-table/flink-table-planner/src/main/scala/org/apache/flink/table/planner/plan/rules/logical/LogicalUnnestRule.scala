@@ -20,9 +20,11 @@ package org.apache.flink.table.planner.plan.rules.logical
 import org.apache.flink.table.functions.BuiltInFunctionDefinitions
 import org.apache.flink.table.planner.calcite.FlinkTypeFactory
 import org.apache.flink.table.planner.functions.bridging.BridgingSqlFunction
+import org.apache.flink.table.planner.plan.utils.CorrelateUtil
 import org.apache.flink.table.planner.utils.ShortcutUtils
 import org.apache.flink.table.runtime.functions.table.UnnestRowsFunction
 import org.apache.flink.table.types.logical.utils.LogicalTypeUtils.toRowType
+
 import com.google.common.collect.ImmutableList
 import org.apache.calcite.plan.{RelOptRule, RelOptRuleCall, RelOptRuleOperand}
 import org.apache.calcite.plan.RelOptRule._
@@ -30,7 +32,6 @@ import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.Uncollect
 import org.apache.calcite.rel.logical._
-import org.apache.flink.table.planner.plan.utils.CorrelateUtil
 
 import java.util.Collections
 

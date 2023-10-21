@@ -17,10 +17,11 @@
  */
 package org.apache.flink.table.planner.plan.utils
 
-import org.apache.calcite.plan.hep.HepRelVertex
-import org.apache.calcite.rel.RelNode
 import org.apache.flink.table.planner.calcite.FlinkTypeFactory
+
+import org.apache.calcite.plan.hep.HepRelVertex
 import org.apache.calcite.rel.`type`.{RelDataType, RelDataTypeField, RelDataTypeFieldImpl}
+import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rex._
 
 import scala.collection.JavaConversions._

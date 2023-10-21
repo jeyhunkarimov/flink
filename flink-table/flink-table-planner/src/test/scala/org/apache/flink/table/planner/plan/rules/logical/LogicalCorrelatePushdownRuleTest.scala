@@ -36,8 +36,7 @@ import java.util
 import scala.collection.JavaConversions._
 
 /** Test for [[LogicalCorrelatePushdownRule]]. */
-class LogicalCorrelatePushdownRuleTest
-  extends TableTestBase {
+class LogicalCorrelatePushdownRuleTest extends TableTestBase {
   protected val util: BatchTableTestUtil = batchTestUtil()
 
   @throws(classOf[Exception])
@@ -70,30 +69,31 @@ class LogicalCorrelatePushdownRuleTest
         "  WITH (\n" +
         " 'bounded' = 'true',\n" +
         " 'connector' = 'values'\n" +
-    ")";
+        ")";
 
     util.tableEnv.executeSql(tableDdl)
-    print(123)
   }
 
   @Test
   def testSingleNestedFieldPushdown(): Unit = {
-//    util.verifyRelPlan("SELECT nationality FROM MyTable, UNNEST(zip_codes) AS t1")
-//    util.verifyRelPlan("SELECT id FROM MyTable, UNNEST(checks) AS t1")
-    util.verifyRelPlan("SELECT name FROM MyTable, UNNEST(other_names) AS t1")
+    util.verifyRelPlan("SELECT nationality as bb FROM MyTable, UNNEST(zip_codes) AS t1")
   }
 
-//  @Test
-//  def testMultipleNestedFieldsPushdown(): Unit = {
-//    util.verifyRelPlan("SELECT nationality FROM MyTable, UNNEST(zip_codes) AS t1, UNNEST(checks) AS t2, UNNEST(other_names) AS t3")
-//    util.verifyRelPlan("SELECT nationality FROM MyTable, UNNEST(other_names) AS t1, UNNEST(zip_codes) AS t2, UNNEST(checks) AS t3")
-//    util.verifyRelPlan("SELECT nationality FROM MyTable, UNNEST(checks) AS t1, UNNEST(zip_codes) AS t2, UNNEST(checks) AS t3")
-//    util.verifyRelPlan("SELECT nationality, name FROM MyTable, UNNEST(checks) AS t1, UNNEST(zip_codes) AS t2, UNNEST(checks) AS t3")
-//    util.verifyRelPlan("SELECT id, nationality FROM MyTable, UNNEST(checks) AS t1, UNNEST(zip_codes) AS t2, UNNEST(checks) AS t3")
-//  }
+  @Test
+  def testMultipleNestedFieldsPushdown(): Unit = {
+    util.verifyRelPlan(
+      "SELECT id, nationality FROM MyTable, UNNEST(checks) AS t1, UNNEST(zip_codes) AS t2, UNNEST(checks) AS t3")
+  }
 
-//  @Test
-//  def testShouldNotPushdownField(): Unit = {
-//    util.verifyRelPlan("SELECT * FROM MyTable, UNNEST(zip_codes) AS t1, UNNEST(checks) AS t2, UNNEST(other_names) AS t3")
-//  }
+  @Test
+  def testMultipleNestedFieldsSelect(): Unit = {
+    util.verifyRelPlan(
+      "SELECT t2, id, t1 nationality FROM MyTable, UNNEST(checks) AS t1, UNNEST(zip_codes) AS t2, UNNEST(checks) AS t3")
+  }
+
+  @Test
+  def testShouldNotPushdownField(): Unit = {
+    util.verifyRelPlan(
+      "SELECT * FROM MyTable, UNNEST(zip_codes) AS t1, UNNEST(checks) AS t2, UNNEST(other_names) AS t3")
+  }
 }
