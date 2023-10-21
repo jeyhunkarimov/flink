@@ -46,7 +46,7 @@ import scala.collection.mutable
  *
  * Note: This class can only be used in HepPlanner.
  */
-class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
+class LogicalCorrelatePushdownRule(operand: RelOptRuleOperand, description: String)
   extends RelOptRule(operand, description) {
 
 
@@ -123,46 +123,10 @@ class LogicalCorrelatePushdown(operand: RelOptRuleOperand, description: String)
       case _ => None
     }
   }
-
-//  private def deriveTargetExprs(requiredFields: Seq[RelDataTypeField], projLeft: LogicalProject): Option[Seq[RelDataTypeField]] = {
-//    val isTableScan = CorrelateUtil.getRel(projLeft.getInput(0)).isInstanceOf[LogicalTableScan]
-//
-//    val refFieldsWithoutProjection = (CorrelateUtil.getRel(projLeft.getInput(0)) match {
-//      case ts: LogicalTableScan => Some(ts.getRowType.getFieldList)
-//      case cor: LogicalCorrelate => Some(cor.getRowType.getFieldList)
-//      case _ => None
-//    }).getOrElse(return None)
-//
-//    val refFieldsWithProjection = projLeft.getRowType.getFieldList
-//
-//
-//
-//
-//
-//
-//
-//    if (isTableScan) {
-//
-//    }
-//    None
-//  }
-
-  //  private def findLeafProjectOp(root: RelNode) : Option[LogicalProject] = {
-//    root match {
-//      case vertex: HepRelVertex => findLeafProjectOp(vertex.getCurrentRel)
-//      case project: LogicalProject if CorrelateUtil.getRel(project.getInput(0)).isInstanceOf[LogicalTableScan] =>
-//        Some(project)
-//      case _ => if (root.getInputs.isEmpty) {
-//        None
-//      } else {
-//        findLeafProjectOp(root.getInput(0))
-//      }
-//    }
-//  }
 }
 
-object LogicalCorrelatePushdown {
-  val INSTANCE = new LogicalCorrelatePushdown(operand(classOf[LogicalCorrelate],
+object LogicalCorrelatePushdownRule {
+  val INSTANCE = new LogicalCorrelatePushdownRule(operand(classOf[LogicalCorrelate],
     operand(classOf[LogicalProject], any),
     operand(classOf[LogicalProject], operand(classOf[LogicalTableFunctionScan], any))
   ), "LogicalCorrelatePushdown")

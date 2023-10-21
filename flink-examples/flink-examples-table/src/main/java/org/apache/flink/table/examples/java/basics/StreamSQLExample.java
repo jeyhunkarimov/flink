@@ -58,19 +58,19 @@ public final class StreamSQLExample {
                 "CREATE TABLE MyTable (\n"
                         + "  a bigint,\n"
                         + "  b int,\n"
-                        + "  c ARRAY<STRING>\n"
-//                        + "  d ARRAY<INT>,\n"
-//                        + "  e int\n"
+                        + "  c ARRAY<STRING>,\n"
+                        + "  d ARRAY<INT>,\n"
+                        + "  e int\n"
                         + ") with (\n"
                         + " 'connector' = 'filesystem',"
                         + " 'format' = 'csv',"
-                        + " 'path' = 'D:\\tmp2')";
+                        + " 'path' = '/Users/jey/tmp')";
         tableEnv.executeSql(srcTableDdl);
 
-//        String ins = "insert into MyTable values (1, 2, ARRAY ['ceyhun', 'sevinc']), (10, 11, ARRAY ['laura', 'lalos'])";
-//        tableEnv.executeSql(ins);
+        String ins = "insert into MyTable values (1, 2, ARRAY ['ceyhun', 'sevinc'], ARRAY [1000, 10001], 999), (1, 2, ARRAY ['sfd', 'sdf'], ARRAY [4444, 4444], 5555)";
+        tableEnv.executeSql(ins);
 
-        String queryNotPushing = "SELECT b FROM MyTable, UNNEST(c) AS t2";
+        String queryNotPushing = "SELECT e, t3 FROM MyTable, UNNEST(d) AS t3, UNNEST(c) AS t2";
         String r2 = tableEnv.explainSql(queryNotPushing);
         System.out.println("NOT Pushing plan:");
         System.out.println(r2);
@@ -80,8 +80,8 @@ public final class StreamSQLExample {
 //        System.out.println("Pushing plan:");
 //        System.out.println(r1);
 
-//        final Table result = tableEnv.sqlQuery(queryNotPushing);
-//        result.execute().print();
+        final Table result = tableEnv.sqlQuery(queryNotPushing);
+        result.execute().print();
         // convert the Table back to an insert-only DataStream of type `Order`
 //
 //        // after the table program is converted to a DataStream program,
