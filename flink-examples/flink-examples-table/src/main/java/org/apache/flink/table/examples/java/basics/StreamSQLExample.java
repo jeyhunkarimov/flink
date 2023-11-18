@@ -20,10 +20,15 @@ package org.apache.flink.table.examples.java.basics;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
+import org.apache.flink.table.api.TableEnvironment;
+import org.apache.flink.table.api.bridge.java.StreamStatementSet;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Simple example for demonstrating the use of SQL on a table backed by a {@link DataStream} in Java
@@ -47,82 +52,54 @@ public final class StreamSQLExample {
     // *************************************************************************
 
     public static void main(String[] args) throws Exception {
-
-        // set up the Java DataStream API
         final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
         // set up the Java Table API
         final StreamTableEnvironment tableEnv = StreamTableEnvironment.create(env);
+        StreamStatementSet stmtSet = tableEnv.createStatementSet();
 
-        final DataStream<Order> orderA =
-                env.fromData(
-                        Arrays.asList(
-                                new Order(1L, "beer", 3),
-                                new Order(1L, "diaper", 4),
-                                new Order(3L, "rubber", 2)));
+        String srcTableDdl =
+                "CREATE TABLE MyTable (\n"
+                        + "  a bigint,\n"
+                        + "  b STRING\n"
+                        + ") with (\n"
+                        + " 'connector' = 'datagen', "
+                        + " 'number-of-rows' = '10' )";
 
-        final DataStream<Order> orderB =
-                env.fromData(
-                        Arrays.asList(
-                                new Order(2L, "pen", 3),
-                                new Order(2L, "rubber", 3),
-                                new Order(4L, "beer", 1)));
+        String srcTableDdl2 =
+                "CREATE TABLE sink1 (\n"
+                        + "  a bigint\n"
+                        + ") with (\n"
+                        + " 'connector' = 'print' )";
 
-        // convert the first DataStream to a Table object
-        // it will be used "inline" and is not registered in a catalog
-        final Table tableA = tableEnv.fromDataStream(orderA);
+        String srcTableDdl3 =
+                "CREATE TABLE sink2 (\n"
+                        + "  b STRING\n"
+                        + ") with (\n"
+                        + " 'connector' = 'print' )";
+        tableEnv.executeSql(srcTableDdl);
+        tableEnv.executeSql(srcTableDdl2);
+        tableEnv.executeSql(srcTableDdl3);
 
-        // convert the second DataStream and register it as a view
-        // it will be accessible under a name
-        tableEnv.createTemporaryView("TableB", orderB);
+        Table table1 = tableEnv.sqlQuery("SELECT a  FROM MyTable where a > 10");
+        Table table2 = tableEnv.sqlQuery("SELECT b  FROM MyTable");
 
-        // union the two tables
-        final Table result =
-                tableEnv.sqlQuery(
-                        "SELECT * FROM "
-                                + tableA
-                                + " WHERE amount > 2 UNION ALL "
-                                + "SELECT * FROM TableB WHERE amount < 2");
+        stmtSet.addInsert("sink1", table1);
+        stmtSet.addInsert("sink2", table2);
 
-        // convert the Table back to an insert-only DataStream of type `Order`
-        tableEnv.toDataStream(result, Order.class).print();
+        stmtSet.execute().wait();
 
-        // after the table program is converted to a DataStream program,
-        // we must use `env.execute()` to submit the job
-        env.execute();
+//        tableEnv.executeSql("insert into sink1 select * from " + table1 + ";" + "insert into sink2 select * from " + table2);
+//        tableEnv.executeSql("insert into sink2 select * from " + table2);
+
+//        Table table3 = tableEnv.sqlQuery("SELECT *  FROM sink1 union select * from sink2" );
+//
+//        tableEnv.toDataStream(table3).print();
+//        String queryNotPushing = "  select a from MyTable";
+//        String r2 = tableEnv.explainSql(queryNotPushing);
+//        System.out.println("NOT Pushing plan:");
+//        System.out.println(r2);
     }
 
-    // *************************************************************************
-    //     USER DATA TYPES
-    // *************************************************************************
 
-    /** Simple POJO. */
-    public static class Order {
-        public Long user;
-        public String product;
-        public int amount;
-
-        // for POJO detection in DataStream API
-        public Order() {}
-
-        // for structured type detection in Table API
-        public Order(Long user, String product, int amount) {
-            this.user = user;
-            this.product = product;
-            this.amount = amount;
-        }
-
-        @Override
-        public String toString() {
-            return "Order{"
-                    + "user="
-                    + user
-                    + ", product='"
-                    + product
-                    + '\''
-                    + ", amount="
-                    + amount
-                    + '}';
-        }
-    }
 }
