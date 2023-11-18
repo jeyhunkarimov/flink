@@ -45,8 +45,8 @@ import java.util.{List => JList}
 @Internal
 class IntermediateRelTable(
     names: JList[String],
-    val relNode: RelNode,
-    val modifyKindSet: ModifyKindSet,
+    var relNode: RelNode,
+    var modifyKindSet: ModifyKindSet,
     val isUpdateBeforeRequired: Boolean,
     val upsertKeys: util.Set[ImmutableBitSet],
     statistic: FlinkStatistic = FlinkStatistic.UNKNOWN)

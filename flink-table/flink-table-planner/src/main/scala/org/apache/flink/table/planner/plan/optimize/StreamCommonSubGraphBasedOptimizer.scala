@@ -33,13 +33,12 @@ import org.apache.flink.table.planner.plan.stats.FlinkStatistic
 import org.apache.flink.table.planner.utils.ShortcutUtils.unwrapContext
 import org.apache.flink.table.planner.utils.TableConfigUtils
 import org.apache.flink.util.Preconditions
-
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.TableScan
+import org.apache.flink.table.planner.plan.utils.ChangelogPlanUtils
 
 import java.util
 import java.util.Collections
-
 import scala.collection.JavaConversions._
 
 /** A [[CommonSubGraphBasedOptimizer]] for Stream. */
@@ -88,20 +87,30 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
     // TODO FLINK-24048: Move changeLog inference out of optimizing phase
     // infer modifyKind property for each blocks independently
     sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
+
+
+    val dd = new OptimizeDAG(planner)
+    val newBl = dd.optimizeDAG(sinkBlocks)
+//    val sd = ChangelogPlanUtils.getChangelogMode(newBl(2).children(0).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
+//    val ssa = newBl(0).getOptimizedPlan
+    newBl
+
+
+
     // infer and propagate updateKind and miniBatchInterval property for each blocks
-    sinkBlocks.foreach {
-      b =>
-        propagateUpdateKindAndMiniBatchInterval(
-          b,
-          b.isUpdateBeforeRequired,
-          b.getMiniBatchInterval,
-          isSinkBlock = true)
-    }
-    // clear the intermediate result
-    sinkBlocks.foreach(resetIntermediateResult)
-    // optimize recursively RelNodeBlock
-    sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
-    sinkBlocks
+//    sinkBlocks.foreach {
+//      b =>
+//        propagateUpdateKindAndMiniBatchInterval(
+//          b,
+//          b.isUpdateBeforeRequired,
+//          b.getMiniBatchInterval,
+//          isSinkBlock = true)
+//    }
+//    // clear the intermediate result
+//    sinkBlocks.foreach(resetIntermediateResult)
+//    // optimize recursively RelNodeBlock
+//    sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
+//    sinkBlocks
   }
 
   private def optimizeBlock(block: RelNodeBlock, isSinkBlock: Boolean): Unit = {
@@ -275,7 +284,7 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
     }
   }
 
-  private def createIntermediateRelTable(
+  protected def createIntermediateRelTable(
       name: String,
       relNode: RelNode,
       modifyKindSet: ModifyKindSet,
