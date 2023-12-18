@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.flink.table.planner.plan.optimize
 
 /*
@@ -18,16 +35,17 @@ package org.apache.flink.table.planner.plan.optimize
  * limitations under the License.
  */
 
-import org.apache.calcite.plan.RelOptTable
 import org.apache.flink.table.api.TableException
 import org.apache.flink.table.api.config.ExecutionConfigOptions
 import org.apache.flink.table.api.config.ExecutionConfigOptions.UpsertMaterialize
 import org.apache.flink.table.catalog.{CatalogManager, ManagedTableListener, ResolvedCatalogBaseTable}
 import org.apache.flink.table.connector.ChangelogMode
 import org.apache.flink.table.planner.plan.`trait`._
-import org.apache.flink.table.planner.plan.`trait`.UpdateKindTrait.{BEFORE_AND_AFTER, ONLY_UPDATE_AFTER, beforeAfterOrNone, onlyAfterOrNone}
+import org.apache.flink.table.planner.plan.`trait`.UpdateKindTrait.{beforeAfterOrNone, onlyAfterOrNone, BEFORE_AND_AFTER, ONLY_UPDATE_AFTER}
 import org.apache.flink.table.planner.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.planner.plan.nodes.physical.stream._
+import org.apache.flink.table.planner.plan.optimize.program.{FlinkOptimizeProgram, StreamOptimizeContext}
+import org.apache.flink.table.planner.plan.schema.IntermediateRelTable
 import org.apache.flink.table.planner.plan.utils._
 import org.apache.flink.table.planner.plan.utils.RankProcessStrategy.{AppendFastStrategy, RetractStrategy, UpdateFastStrategy}
 import org.apache.flink.table.planner.sinks.DataStreamTableSink
@@ -35,17 +53,21 @@ import org.apache.flink.table.planner.utils.ShortcutUtils.unwrapTableConfig
 import org.apache.flink.table.runtime.operators.join.FlinkJoinType
 import org.apache.flink.table.sinks.{AppendStreamTableSink, RetractStreamTableSink, StreamTableSink, UpsertStreamTableSink}
 import org.apache.flink.types.RowKind
+
+import org.apache.calcite.plan.RelOptTable
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.util.ImmutableBitSet
-import org.apache.flink.table.planner.plan.optimize.program.{FlinkOptimizeProgram, StreamOptimizeContext}
-import org.apache.flink.table.planner.plan.schema.IntermediateRelTable
 
 import scala.collection.JavaConversions._
 
 /** An optimize program to infer ChangelogMode for every physical node. */
 class Optimm {
 
-  def optimize(root: RelNode, isUpdateBeforeRequired: Boolean, cm: CatalogManager, downstreamPlan: Option[StreamPhysicalRel]): RelNode = {
+  def optimize(
+      root: RelNode,
+      isUpdateBeforeRequired: Boolean,
+      cm: CatalogManager,
+      downstreamPlan: Option[StreamPhysicalRel]): RelNode = {
     // step1: satisfy ModifyKindSet trait
     val physicalRoot = root.asInstanceOf[StreamPhysicalRel]
     val rootWithModifyKindSet = new SatisfyModifyKindSetTraitVisitor(downstreamPlan).visit(
@@ -95,7 +117,8 @@ class Optimm {
    * an exception should be thrown if the planner doesn't support to satisfy the required
    * [[ModifyKindSetTrait]].
    */
-  private class SatisfyModifyKindSetTraitVisitor(private val  downstreamPlan: Option[StreamPhysicalRel]) {
+  private class SatisfyModifyKindSetTraitVisitor(
+      private val downstreamPlan: Option[StreamPhysicalRel]) {
 
     /**
      * Try to satisfy the required [[ModifyKindSetTrait]] from root.
@@ -120,9 +143,9 @@ class Optimm {
      *   exception if required trait can’t be satisfied.
      */
     def visit(
-               rel: StreamPhysicalRel,
-               requiredTrait: ModifyKindSetTrait,
-               requester: String): StreamPhysicalRel = rel match {
+        rel: StreamPhysicalRel,
+        requiredTrait: ModifyKindSetTrait,
+        requester: String): StreamPhysicalRel = rel match {
       case sink: StreamPhysicalSink =>
         val name = s"Table sink '${sink.contextResolvedTable.getIdentifier.asSummaryString()}'"
         val queryModifyKindSet = deriveQueryDefaultChangelogMode(sink.getInput, name)
@@ -180,7 +203,7 @@ class Optimm {
           .addContainedKind(ModifyKind.UPDATE)
         if (
           inputModifyKindSet.contains(ModifyKind.UPDATE) ||
-            inputModifyKindSet.contains(ModifyKind.DELETE)
+          inputModifyKindSet.contains(ModifyKind.DELETE)
         ) {
           builder.addContainedKind(ModifyKind.DELETE)
         }
@@ -203,7 +226,7 @@ class Optimm {
           .addContainedKind(ModifyKind.UPDATE)
         if (
           inputModifyKindSet.contains(ModifyKind.UPDATE) ||
-            inputModifyKindSet.contains(ModifyKind.DELETE)
+          inputModifyKindSet.contains(ModifyKind.DELETE)
         ) {
           builder.addContainedKind(ModifyKind.DELETE)
         }
@@ -223,7 +246,7 @@ class Optimm {
         createNewNode(window, children, providedTrait, requiredTrait, requester)
 
       case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
-           _: StreamPhysicalWindowDeduplicate =>
+          _: StreamPhysicalWindowDeduplicate =>
         // WindowAggregate, WindowRank, WindowDeduplicate support insert-only in input
         val children = visitChildren(rel, ModifyKindSetTrait.INSERT_ONLY)
         val providedTrait = ModifyKindSetTrait.INSERT_ONLY
@@ -257,7 +280,7 @@ class Optimm {
         createNewNode(cep, children, ModifyKindSetTrait.INSERT_ONLY, requiredTrait, requester)
 
       case _: StreamPhysicalTemporalSort | _: StreamPhysicalIntervalJoin |
-           _: StreamPhysicalOverAggregate | _: StreamPhysicalPythonOverAggregate =>
+          _: StreamPhysicalOverAggregate | _: StreamPhysicalPythonOverAggregate =>
         // TemporalSort, OverAggregate, IntervalJoin only support consuming insert-only
         // and producing insert-only changes
         val children = visitChildren(rel, ModifyKindSetTrait.INSERT_ONLY)
@@ -297,9 +320,9 @@ class Optimm {
         createNewNode(temporalJoin, children, leftTrait, requiredTrait, requester)
 
       case _: StreamPhysicalCalcBase | _: StreamPhysicalCorrelateBase |
-           _: StreamPhysicalLookupJoin | _: StreamPhysicalExchange | _: StreamPhysicalExpand |
-           _: StreamPhysicalMiniBatchAssigner | _: StreamPhysicalWatermarkAssigner |
-           _: StreamPhysicalWindowTableFunction =>
+          _: StreamPhysicalLookupJoin | _: StreamPhysicalExchange | _: StreamPhysicalExpand |
+          _: StreamPhysicalMiniBatchAssigner | _: StreamPhysicalWatermarkAssigner |
+          _: StreamPhysicalWindowTableFunction =>
         // transparent forward requiredTrait to children
         val children = visitChildren(rel, requiredTrait, requester)
         val childrenTrait = children.head.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
@@ -331,7 +354,7 @@ class Optimm {
         createNewNode(ts, List(), providedTrait, requiredTrait, requester)
 
       case _: StreamPhysicalDataStreamScan | _: StreamPhysicalLegacyTableSourceScan |
-           _: StreamPhysicalValues =>
+          _: StreamPhysicalValues =>
         // DataStream, TableSource and Values only support producing insert-only messages
         createNewNode(rel, List(), ModifyKindSetTrait.INSERT_ONLY, requiredTrait, requester)
 
@@ -345,15 +368,15 @@ class Optimm {
     }
 
     private def visitChildren(
-                               parent: StreamPhysicalRel,
-                               requiredChildrenTrait: ModifyKindSetTrait): List[StreamPhysicalRel] = {
+        parent: StreamPhysicalRel,
+        requiredChildrenTrait: ModifyKindSetTrait): List[StreamPhysicalRel] = {
       visitChildren(parent, requiredChildrenTrait, getNodeName(parent))
     }
 
     private def visitChildren(
-                               parent: StreamPhysicalRel,
-                               requiredChildrenTrait: ModifyKindSetTrait,
-                               requester: String): List[StreamPhysicalRel] = {
+        parent: StreamPhysicalRel,
+        requiredChildrenTrait: ModifyKindSetTrait,
+        requester: String): List[StreamPhysicalRel] = {
       val newChildren = for (i <- 0 until parent.getInputs.size()) yield {
         visitChild(parent, i, requiredChildrenTrait, requester)
       }
@@ -361,10 +384,10 @@ class Optimm {
     }
 
     private def visitChild(
-                            parent: StreamPhysicalRel,
-                            childOrdinal: Int,
-                            requiredChildTrait: ModifyKindSetTrait,
-                            requester: String): StreamPhysicalRel = {
+        parent: StreamPhysicalRel,
+        childOrdinal: Int,
+        requiredChildTrait: ModifyKindSetTrait,
+        requester: String): StreamPhysicalRel = {
       val child = parent.getInput(childOrdinal).asInstanceOf[StreamPhysicalRel]
       this.visit(child, requiredChildTrait, requester)
     }
@@ -389,11 +412,11 @@ class Optimm {
     }
 
     private def createNewNode(
-                               node: StreamPhysicalRel,
-                               children: List[StreamPhysicalRel],
-                               providedTrait: ModifyKindSetTrait,
-                               requiredTrait: ModifyKindSetTrait,
-                               requestedOwner: String): StreamPhysicalRel = {
+        node: StreamPhysicalRel,
+        children: List[StreamPhysicalRel],
+        providedTrait: ModifyKindSetTrait,
+        requiredTrait: ModifyKindSetTrait,
+        requestedOwner: String): StreamPhysicalRel = {
       if (!providedTrait.satisfies(requiredTrait)) {
         val diff = providedTrait.modifyKindSet.minus(requiredTrait.modifyKindSet)
         val diffString = diff.getContainedKinds.toList.sorted // for deterministic error message
@@ -418,7 +441,9 @@ class Optimm {
    * <p>After traversed by this visitor, every node should have a correct [[UpdateKindTrait]] or
    * returns None if the planner doesn't support to satisfy the required [[UpdateKindTrait]].
    */
-  private class SatisfyUpdateKindTraitVisitor(private val cm:  CatalogManager, private val downstreamPlan: Option[StreamPhysicalRel]) {
+  private class SatisfyUpdateKindTraitVisitor(
+      private val cm: CatalogManager,
+      private val downstreamPlan: Option[StreamPhysicalRel]) {
 
     /**
      * Try to satisfy the required [[UpdateKindTrait]] from root.
@@ -476,9 +501,9 @@ class Optimm {
           visitSink(sink, sinkRequiredTraits)
 
         case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGroupTableAggregate |
-             _: StreamPhysicalLimit | _: StreamPhysicalPythonGroupAggregate |
-             _: StreamPhysicalPythonGroupTableAggregate |
-             _: StreamPhysicalGroupWindowAggregateBase =>
+            _: StreamPhysicalLimit | _: StreamPhysicalPythonGroupAggregate |
+            _: StreamPhysicalPythonGroupTableAggregate |
+            _: StreamPhysicalGroupWindowAggregateBase =>
           // Aggregate, TableAggregate, Limit and GroupWindowAggregate requires update_before if
           // there are updates
           val requiredChildTrait = beforeAfterOrNone(getModifyKindSet(rel.getInput(0)))
@@ -487,10 +512,10 @@ class Optimm {
           createNewNode(rel, children, requiredTrait)
 
         case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
-             _: StreamPhysicalWindowDeduplicate | _: StreamPhysicalDeduplicate |
-             _: StreamPhysicalTemporalSort | _: StreamPhysicalMatch |
-             _: StreamPhysicalOverAggregate | _: StreamPhysicalIntervalJoin |
-             _: StreamPhysicalPythonOverAggregate | _: StreamPhysicalWindowJoin =>
+            _: StreamPhysicalWindowDeduplicate | _: StreamPhysicalDeduplicate |
+            _: StreamPhysicalTemporalSort | _: StreamPhysicalMatch |
+            _: StreamPhysicalOverAggregate | _: StreamPhysicalIntervalJoin |
+            _: StreamPhysicalPythonOverAggregate | _: StreamPhysicalWindowJoin =>
           // WindowAggregate, WindowTableAggregate, WindowRank, WindowDeduplicate, Deduplicate,
           // TemporalSort, CEP, OverAggregate, and IntervalJoin, WindowJoin require nothing about
           // UpdateKind.
@@ -580,7 +605,7 @@ class Optimm {
         case calc: StreamPhysicalCalcBase =>
           if (
             requiredTrait == UpdateKindTrait.ONLY_UPDATE_AFTER &&
-              calc.getProgram.getCondition != null
+            calc.getProgram.getCondition != null
           ) {
             // we don't expect filter to satisfy ONLY_UPDATE_AFTER update kind,
             // to solve the bad case like a single 'cnt < 10' condition after aggregation.
@@ -597,9 +622,9 @@ class Optimm {
           }
 
         case _: StreamPhysicalCorrelateBase | _: StreamPhysicalLookupJoin |
-             _: StreamPhysicalExchange | _: StreamPhysicalExpand |
-             _: StreamPhysicalMiniBatchAssigner | _: StreamPhysicalWatermarkAssigner |
-             _: StreamPhysicalWindowTableFunction =>
+            _: StreamPhysicalExchange | _: StreamPhysicalExpand |
+            _: StreamPhysicalMiniBatchAssigner | _: StreamPhysicalWatermarkAssigner |
+            _: StreamPhysicalWindowTableFunction =>
           // transparent forward requiredTrait to children
           visitChildren(rel, requiredTrait) match {
             case None => None
@@ -653,7 +678,7 @@ class Optimm {
           val tableIdentifier = contextResolvedTable.getIdentifier
           if (
             !contextResolvedTable.isAnonymous
-              && requiredTrait == UpdateKindTrait.ONLY_UPDATE_AFTER
+            && requiredTrait == UpdateKindTrait.ONLY_UPDATE_AFTER
           ) {
             val catalogName = tableIdentifier.getCatalogName
             val catalog = cm.getCatalog(catalogName).orElse(null)
@@ -684,7 +709,7 @@ class Optimm {
           val newSource = createNewNode(rel, Some(List()), providedTrait)
           if (
             providedTrait.equals(UpdateKindTrait.BEFORE_AND_AFTER) &&
-              requiredTrait.equals(UpdateKindTrait.ONLY_UPDATE_AFTER)
+            requiredTrait.equals(UpdateKindTrait.ONLY_UPDATE_AFTER)
           ) {
             // requiring only-after, but the source is CDC source, then drop update_before manually
             val dropUB = new StreamPhysicalDropUpdateBefore(rel.getCluster, rel.getTraitSet, rel)
@@ -694,12 +719,13 @@ class Optimm {
           }
 
         case _: StreamPhysicalDataStreamScan | _: StreamPhysicalLegacyTableSourceScan |
-             _: StreamPhysicalValues =>
+            _: StreamPhysicalValues =>
           createNewNode(rel, Some(List()), UpdateKindTrait.NONE)
 
         case scan: StreamPhysicalIntermediateTableScan =>
           if (downstreamPlan.nonEmpty) {
-            val modifyKindSetTrait = downstreamPlan.get.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
+            val modifyKindSetTrait =
+              downstreamPlan.get.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
             scan.intermediateTable.relNode = downstreamPlan.get
             scan.intermediateTable.modifyKindSet = modifyKindSetTrait.modifyKindSet
           }
@@ -724,8 +750,8 @@ class Optimm {
       }
 
     private def visitChildren(
-                               parent: StreamPhysicalRel,
-                               requiredChildrenTrait: UpdateKindTrait): Option[List[StreamPhysicalRel]] = {
+        parent: StreamPhysicalRel,
+        requiredChildrenTrait: UpdateKindTrait): Option[List[StreamPhysicalRel]] = {
       val newChildren = for (child <- parent.getInputs) yield {
         this.visit(child.asInstanceOf[StreamPhysicalRel], requiredChildrenTrait) match {
           case None =>
@@ -744,9 +770,9 @@ class Optimm {
     }
 
     private def createNewNode(
-                               node: StreamPhysicalRel,
-                               childrenOption: Option[List[StreamPhysicalRel]],
-                               providedTrait: UpdateKindTrait): Option[StreamPhysicalRel] = childrenOption match {
+        node: StreamPhysicalRel,
+        childrenOption: Option[List[StreamPhysicalRel]],
+        providedTrait: UpdateKindTrait): Option[StreamPhysicalRel] = childrenOption match {
       case None =>
         None
       case Some(children) =>
@@ -779,9 +805,9 @@ class Optimm {
      *   a function to apply rank strategy to get a new copied rank node
      */
     private def visitRankStrategies(
-                                     rankStrategies: Seq[RankProcessStrategy],
-                                     requiredUpdateKindTrait: UpdateKindTrait,
-                                     applyRankStrategy: RankProcessStrategy => StreamPhysicalRel): Option[StreamPhysicalRel] = {
+        rankStrategies: Seq[RankProcessStrategy],
+        requiredUpdateKindTrait: UpdateKindTrait,
+        applyRankStrategy: RankProcessStrategy => StreamPhysicalRel): Option[StreamPhysicalRel] = {
       // go pass every RankProcessStrategy, apply the rank strategy to get a new copied rank node,
       // return the first satisfied converted node
       for (strategy <- rankStrategies) {
@@ -801,8 +827,8 @@ class Optimm {
     }
 
     private def visitSink(
-                           sink: StreamPhysicalRel,
-                           sinkRequiredTraits: Seq[UpdateKindTrait]): Option[StreamPhysicalRel] = {
+        sink: StreamPhysicalRel,
+        sinkRequiredTraits: Seq[UpdateKindTrait]): Option[StreamPhysicalRel] = {
       val children = sinkRequiredTraits.flatMap(t => visitChildren(sink, t))
       if (children.isEmpty) {
         None

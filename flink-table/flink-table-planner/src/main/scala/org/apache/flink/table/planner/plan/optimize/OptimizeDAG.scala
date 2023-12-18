@@ -30,27 +30,28 @@ import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysical
 import org.apache.flink.table.planner.plan.optimize.program.{FlinkStreamProgram, StreamOptimizeContext}
 import org.apache.flink.table.planner.plan.schema.IntermediateRelTable
 import org.apache.flink.table.planner.plan.stats.FlinkStatistic
+import org.apache.flink.table.planner.plan.utils.ChangelogPlanUtils
 import org.apache.flink.table.planner.utils.ShortcutUtils.unwrapContext
 import org.apache.flink.table.planner.utils.TableConfigUtils
 import org.apache.flink.util.Preconditions
+
 import org.apache.calcite.rel.RelNode
 import org.apache.calcite.rel.core.TableScan
-import org.apache.flink.table.planner.plan.utils.ChangelogPlanUtils
 
 import java.util
 import java.util.Collections
-import scala.collection.JavaConversions._
 
+import scala.collection.JavaConversions._
 
 class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptimizer(planner) {
 
   private val optimm = new Optimm
 
   private def propagateUpdateKindAndMiniBatchInterval(
-                                                       block: RelNodeBlock,
-                                                       updateBeforeRequired: Boolean,
-                                                       miniBatchInterval: MiniBatchInterval,
-                                                       isSinkBlock: Boolean): Unit = {
+      block: RelNodeBlock,
+      updateBeforeRequired: Boolean,
+      miniBatchInterval: MiniBatchInterval,
+      isSinkBlock: Boolean): Unit = {
     val blockLogicalPlan = block.getPlan
     val optPlan = block.getOptimizedPlan
     // infer updateKind and miniBatchInterval with required trait
@@ -71,25 +72,25 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
 
     def propagateTraits(rel: RelNode): Unit =
       rel match {
-      case _: StreamPhysicalDataStreamScan | _: StreamPhysicalIntermediateTableScan |
-           _: StreamPhysicalLegacyTableSourceScan | _: StreamPhysicalTableSourceScan =>
-        val scan = rel.asInstanceOf[TableScan]
-        val updateKindTrait = scan.getTraitSet.getTrait(UpdateKindTraitDef.INSTANCE)
-        val miniBatchIntervalTrait = scan.getTraitSet.getTrait(MiniBatchIntervalTraitDef.INSTANCE)
-        val tableName = scan.getTable.getQualifiedName.mkString(".")
-        val inputBlocks = block.children.filter(b => tableName.equals(b.getOutputTableName))
-        Preconditions.checkArgument(inputBlocks.size <= 1)
-        if (inputBlocks.size == 1) {
-          val childBlock = inputBlocks.head
-          // propagate miniBatchInterval trait to child block
-          childBlock.setMiniBatchInterval(miniBatchIntervalTrait.getMiniBatchInterval)
-          // propagate updateKind trait to child block
-          val requireUB = updateKindTrait.updateKind == UpdateKind.BEFORE_AND_AFTER
-          childBlock.setUpdateBeforeRequired(requireUB || childBlock.isUpdateBeforeRequired)
-        }
-      case ser: StreamPhysicalRel => ser.getInputs.foreach(e => propagateTraits(e))
-      case _ => // do nothing
-    }
+        case _: StreamPhysicalDataStreamScan | _: StreamPhysicalIntermediateTableScan |
+            _: StreamPhysicalLegacyTableSourceScan | _: StreamPhysicalTableSourceScan =>
+          val scan = rel.asInstanceOf[TableScan]
+          val updateKindTrait = scan.getTraitSet.getTrait(UpdateKindTraitDef.INSTANCE)
+          val miniBatchIntervalTrait = scan.getTraitSet.getTrait(MiniBatchIntervalTraitDef.INSTANCE)
+          val tableName = scan.getTable.getQualifiedName.mkString(".")
+          val inputBlocks = block.children.filter(b => tableName.equals(b.getOutputTableName))
+          Preconditions.checkArgument(inputBlocks.size <= 1)
+          if (inputBlocks.size == 1) {
+            val childBlock = inputBlocks.head
+            // propagate miniBatchInterval trait to child block
+            childBlock.setMiniBatchInterval(miniBatchIntervalTrait.getMiniBatchInterval)
+            // propagate updateKind trait to child block
+            val requireUB = updateKindTrait.updateKind == UpdateKind.BEFORE_AND_AFTER
+            childBlock.setUpdateBeforeRequired(requireUB || childBlock.isUpdateBeforeRequired)
+          }
+        case ser: StreamPhysicalRel => ser.getInputs.foreach(e => propagateTraits(e))
+        case _ => // do nothing
+      }
 
   }
 
@@ -101,17 +102,27 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
         }
     }
     val blockLogicalPlan = block.getPlan
-    val downstreamPlan = if(block.children.nonEmpty) Some(block.children(idx).getOptimizedPlan.asInstanceOf[StreamPhysicalRel]) else None
+    val downstreamPlan =
+      if (block.children.nonEmpty)
+        Some(block.children(idx).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
+      else None
 
     blockLogicalPlan match {
       case _: LegacySink | _: Sink =>
         require(isSinkBlock)
-        val optimizedTree = optimm.optimize(block.getOptimizedPlan, block.isUpdateBeforeRequired, planner.catalogManager, downstreamPlan)
+        val optimizedTree = optimm.optimize(
+          block.getOptimizedPlan,
+          block.isUpdateBeforeRequired,
+          planner.catalogManager,
+          downstreamPlan)
         block.setOptimizedPlan(optimizedTree)
 
       case o =>
-
-        val optimizedPlan = optimm.optimize(block.getOptimizedPlan, block.isUpdateBeforeRequired, planner.catalogManager, downstreamPlan)
+        val optimizedPlan = optimm.optimize(
+          block.getOptimizedPlan,
+          block.isUpdateBeforeRequired,
+          planner.catalogManager,
+          downstreamPlan)
         val modifyKindSetTrait = optimizedPlan.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
         val name = createUniqueIntermediateRelTableName
         val intermediateRelTable = createIntermediateRelTable(
@@ -126,7 +137,7 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
     }
   }
 
-  def optimizeDAG(sb:  Seq[RelNodeBlock]): Seq[RelNodeBlock] = {
+  def optimizeDAG(sb: Seq[RelNodeBlock]): Seq[RelNodeBlock] = {
     val sinkBlocks = sb
     sinkBlocks.foreach {
       b =>
@@ -143,10 +154,10 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
     sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
 
     sinkBlocks.foreach(s => s.setNewOutputNode(s.getOptimizedPlan))
-    val ch = ChangelogPlanUtils.getChangelogMode(sinkBlocks(0).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
+    val ch = ChangelogPlanUtils.getChangelogMode(
+      sinkBlocks(0).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
     sinkBlocks
   }
-
 
   private def resetIntermediateResult(block: RelNodeBlock): Unit = {
     block.setNewOutputNode(null)
