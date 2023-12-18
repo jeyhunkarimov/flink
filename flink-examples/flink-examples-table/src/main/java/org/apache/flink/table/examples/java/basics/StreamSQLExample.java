@@ -20,15 +20,9 @@ package org.apache.flink.table.examples.java.basics;
 
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
-import org.apache.flink.table.api.EnvironmentSettings;
 import org.apache.flink.table.api.Table;
-import org.apache.flink.table.api.TableEnvironment;
 import org.apache.flink.table.api.bridge.java.StreamStatementSet;
 import org.apache.flink.table.api.bridge.java.StreamTableEnvironment;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * Simple example for demonstrating the use of SQL on a table backed by a {@link DataStream} in Java
@@ -89,17 +83,17 @@ public final class StreamSQLExample {
 
         stmtSet.execute().wait();
 
-//        tableEnv.executeSql("insert into sink1 select * from " + table1 + ";" + "insert into sink2 select * from " + table2);
-//        tableEnv.executeSql("insert into sink2 select * from " + table2);
+        //        tableEnv.executeSql("insert into sink1 select * from " + table1 + ";" + "insert
+        // into sink2 select * from " + table2);
+        //        tableEnv.executeSql("insert into sink2 select * from " + table2);
 
-//        Table table3 = tableEnv.sqlQuery("SELECT *  FROM sink1 union select * from sink2" );
-//
-//        tableEnv.toDataStream(table3).print();
-//        String queryNotPushing = "  select a from MyTable";
-//        String r2 = tableEnv.explainSql(queryNotPushing);
-//        System.out.println("NOT Pushing plan:");
-//        System.out.println(r2);
+        //        Table table3 = tableEnv.sqlQuery("SELECT *  FROM sink1 union select * from sink2"
+        // );
+        //
+        //        tableEnv.toDataStream(table3).print();
+        //        String queryNotPushing = "  select a from MyTable";
+        //        String r2 = tableEnv.explainSql(queryNotPushing);
+        //        System.out.println("NOT Pushing plan:");
+        //        System.out.println(r2);
     }
-
-
 }

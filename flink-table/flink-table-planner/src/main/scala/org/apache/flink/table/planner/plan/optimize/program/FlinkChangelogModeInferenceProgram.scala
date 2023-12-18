@@ -45,7 +45,7 @@ class FlinkChangelogModeInferenceProgram extends FlinkOptimizeProgram[StreamOpti
   override def optimize(root: RelNode, context: StreamOptimizeContext): RelNode = {
     // step1: satisfy ModifyKindSet trait
     val physicalRoot = root.asInstanceOf[StreamPhysicalRel]
-    val   rootWithModifyKindSet = new SatisfyModifyKindSetTraitVisitor().visit(
+    val rootWithModifyKindSet = new SatisfyModifyKindSetTraitVisitor().visit(
       physicalRoot,
       // we do not propagate the ModifyKindSet requirement and requester among blocks
       // set default ModifyKindSet requirement and requester for root
