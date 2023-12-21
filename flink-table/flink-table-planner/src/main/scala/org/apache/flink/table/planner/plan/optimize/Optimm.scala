@@ -193,9 +193,10 @@ class Optimm {
         }
         createNewNode(deduplicate, children, providedTrait, requiredTrait, requester)
 
-      case agg: StreamPhysicalGroupAggregate =>
+      case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGlobalGroupAggregate |
+          _: StreamPhysicalLocalGroupAggregate =>
         // agg support all changes in input
-        val children = visitChildren(agg, ModifyKindSetTrait.ALL_CHANGES)
+        val children = visitChildren(rel, ModifyKindSetTrait.ALL_CHANGES)
         val inputModifyKindSet = getModifyKindSet(children.head)
         val builder = ModifyKindSet
           .newBuilder()
@@ -208,7 +209,7 @@ class Optimm {
           builder.addContainedKind(ModifyKind.DELETE)
         }
         val providedTrait = new ModifyKindSetTrait(builder.build())
-        createNewNode(agg, children, providedTrait, requiredTrait, requester)
+        createNewNode(rel, children, providedTrait, requiredTrait, requester)
 
       case tagg: StreamPhysicalGroupTableAggregateBase =>
         // table agg support all changes in input
@@ -246,6 +247,7 @@ class Optimm {
         createNewNode(window, children, providedTrait, requiredTrait, requester)
 
       case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
+          _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
           _: StreamPhysicalWindowDeduplicate =>
         // WindowAggregate, WindowRank, WindowDeduplicate support insert-only in input
         val children = visitChildren(rel, ModifyKindSetTrait.INSERT_ONLY)
@@ -501,6 +503,7 @@ class Optimm {
           visitSink(sink, sinkRequiredTraits)
 
         case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGroupTableAggregate |
+            _: StreamPhysicalGlobalGroupAggregate | _: StreamPhysicalLocalGroupAggregate |
             _: StreamPhysicalLimit | _: StreamPhysicalPythonGroupAggregate |
             _: StreamPhysicalPythonGroupTableAggregate |
             _: StreamPhysicalGroupWindowAggregateBase =>
@@ -512,6 +515,7 @@ class Optimm {
           createNewNode(rel, children, requiredTrait)
 
         case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
+            _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
             _: StreamPhysicalWindowDeduplicate | _: StreamPhysicalDeduplicate |
             _: StreamPhysicalTemporalSort | _: StreamPhysicalMatch |
             _: StreamPhysicalOverAggregate | _: StreamPhysicalIntervalJoin |

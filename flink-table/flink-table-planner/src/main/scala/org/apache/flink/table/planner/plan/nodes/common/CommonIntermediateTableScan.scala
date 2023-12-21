@@ -35,7 +35,7 @@ abstract class CommonIntermediateTableScan(
   extends TableScan(cluster, traitSet, table)
   with FlinkRelNode {
 
-  val intermediateTable: IntermediateRelTable = getTable.unwrap(classOf[IntermediateRelTable])
+  var intermediateTable: IntermediateRelTable = getTable.unwrap(classOf[IntermediateRelTable])
 
   override def getRelDetailedDescription: String = {
     intermediateTable.relNode.asInstanceOf[FlinkRelNode].getRelDetailedDescription
