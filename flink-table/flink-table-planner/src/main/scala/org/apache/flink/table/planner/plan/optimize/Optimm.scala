@@ -217,6 +217,12 @@ class Optimm {
         // table aggregate will produce all changes, including deletions
         createNewNode(tagg, children, ModifyKindSetTrait.ALL_CHANGES, requiredTrait, requester)
 
+      case dropUB: StreamPhysicalDropUpdateBefore =>
+        // table agg support all changes in input
+        val children = visitChildren(dropUB, ModifyKindSetTrait.ALL_CHANGES)
+        // table aggregate will produce all changes, including deletions
+        createNewNode(dropUB, children, ModifyKindSetTrait.ALL_CHANGES, requiredTrait, requester)
+
       case agg: StreamPhysicalPythonGroupAggregate =>
         // agg support all changes in input
         val children = visitChildren(agg, ModifyKindSetTrait.ALL_CHANGES)
@@ -513,6 +519,15 @@ class Optimm {
           val children = visitChildren(rel, requiredChildTrait)
           // use requiredTrait as providedTrait, because they should support all kinds of UpdateKind
           createNewNode(rel, children, requiredTrait)
+
+        case dropUB: StreamPhysicalDropUpdateBefore =>
+          val children = visitChildren(dropUB, UpdateKindTrait.ONLY_UPDATE_AFTER)
+          // use requiredTrait as providedTrait, because they should support all kinds of UpdateKind
+//          createNewNode(dropUB, children, requiredTrait)
+          children match {
+            case Some(vals) => Some(vals.get(0))
+            case None => None
+          }
 
         case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
             _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
