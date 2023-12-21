@@ -101,6 +101,28 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
           optimizeBlock(zippedChild._1, isSinkBlock = false, zippedChild._2)
         }
     }
+
+    def prope(rel: RelNode): Unit =
+      rel match {
+        case sc: StreamPhysicalIntermediateTableScan =>
+
+          val name = sc.intermediateTable.getNames.get(0)
+          val intermediateRelTable = createIntermediateRelTable(
+            name,
+            block.children(idx).getOptimizedPlan,
+            block.children(idx).getOptimizedPlan.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE).modifyKindSet,
+            block.isUpdateBeforeRequired)
+
+          sc.intermediateTable = intermediateRelTable
+
+          val newTableScan = wrapIntermediateRelTableToTableScan(intermediateRelTable, name)
+//          block.children(idx).setNewOutputNode(newTableScan)
+        case ser: StreamPhysicalRel => ser.getInputs.foreach(e => prope(e))
+        case _ => // do nothing
+      }
+
+
+    prope(block.getOptimizedPlan)
     val blockLogicalPlan = block.getPlan
     val downstreamPlan =
       if (block.children.nonEmpty)
@@ -131,14 +153,19 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
           modifyKindSetTrait.modifyKindSet,
           block.isUpdateBeforeRequired)
         val newTableScan = wrapIntermediateRelTableToTableScan(intermediateRelTable, name)
+        block.setOptimizedPlan(optimizedPlan)
         block.setNewOutputNode(newTableScan)
         block.setOutputTableName(name)
-        block.setOptimizedPlan(optimizedPlan)
     }
+
+
   }
 
   def optimizeDAG(sb: Seq[RelNodeBlock]): Seq[RelNodeBlock] = {
     val sinkBlocks = sb
+
+    sinkBlocks.foreach(resetIntermediateResult)
+    sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
     sinkBlocks.foreach {
       b =>
         propagateUpdateKindAndMiniBatchInterval(
@@ -154,8 +181,8 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
     sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
 
     sinkBlocks.foreach(s => s.setNewOutputNode(s.getOptimizedPlan))
-    val ch = ChangelogPlanUtils.getChangelogMode(
-      sinkBlocks(0).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
+//    val ch = ChangelogPlanUtils.getChangelogMode(
+//      sinkBlocks(0).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
     sinkBlocks
   }
 

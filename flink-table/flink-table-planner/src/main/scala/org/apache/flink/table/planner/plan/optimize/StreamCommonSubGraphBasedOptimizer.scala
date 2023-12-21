@@ -83,15 +83,27 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
         block.getMiniBatchInterval,
         isSinkBlock = true)
       block.setOptimizedPlan(optimizedTree)
-      return sinkBlocks
+
+      sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
+
+      val dd = new OptimizeDAG(planner)
+      val newBl = dd.optimizeDAG(sinkBlocks)
+      //    newBl.foreach(resetIntermediateResult)
+      //    // optimize recursively RelNodeBlock
+      //    newBl.foreach(b => optimizeBlock(b, isSinkBlock = true))
+
+      return newBl
     }
 
     // TODO FLINK-24048: Move changeLog inference out of optimizing phase
     // infer modifyKind property for each blocks independently
     sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
-//    sinkBlocks
+
     val dd = new OptimizeDAG(planner)
     val newBl = dd.optimizeDAG(sinkBlocks)
+//    newBl.foreach(resetIntermediateResult)
+//    // optimize recursively RelNodeBlock
+//    newBl.foreach(b => optimizeBlock(b, isSinkBlock = true))
     newBl
 
     //    val sd = ChangelogPlanUtils.getChangelogMode(newBl(2).children(0).getOptimizedPlan.asInstanceOf[StreamPhysicalRel])
@@ -107,7 +119,7 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
 //          isSinkBlock = true)
 //    }
 //    // clear the intermediate result
-//    sinkBlocks.foreach(resetIntermediateResult)
+//     sinkBlocks.foreach(resetIntermediateResult)
 //    // optimize recursively RelNodeBlock
 //    sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
 //    sinkBlocks

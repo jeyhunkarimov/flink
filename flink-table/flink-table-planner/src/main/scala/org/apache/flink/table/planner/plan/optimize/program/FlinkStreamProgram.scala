@@ -295,7 +295,7 @@ object FlinkStreamProgram {
             .build(),
           "watermark transpose"
         )
-        .addProgram(new FlinkChangelogModeInferenceProgram, "Changelog mode inference")
+//        .addProgram(new FlinkChangelogModeInferenceProgram, "Changelog mode inference")
         .addProgram(
           new FlinkMiniBatchIntervalTraitInitProgram,
           "Initialization for mini-batch interval inference")
