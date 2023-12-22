@@ -281,42 +281,42 @@ object FlinkStreamProgram {
         .build()
     )
 
-    // physical rewrite
-    chainedProgram.addLast(
-      PHYSICAL_REWRITE,
-      FlinkGroupProgramBuilder
-        .newBuilder[StreamOptimizeContext]
-        // add a HEP program for watermark transpose rules to make this optimization deterministic
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-            .add(FlinkStreamRuleSets.WATERMARK_TRANSPOSE_RULES)
-            .build(),
-          "watermark transpose"
-        )
+//    // physical rewrite
+//    chainedProgram.addLast(
+//      PHYSICAL_REWRITE,
+//      FlinkGroupProgramBuilder
+//        .newBuilder[StreamOptimizeContext]
+//        // add a HEP program for watermark transpose rules to make this optimization deterministic
+//        .addProgram(
+//          FlinkHepRuleSetProgramBuilder.newBuilder
+//            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+//            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+//            .add(FlinkStreamRuleSets.WATERMARK_TRANSPOSE_RULES)
+//            .build(),
+//          "watermark transpose"
+//        )
 //        .addProgram(new FlinkChangelogModeInferenceProgram, "Changelog mode inference")
-        .addProgram(
-          new FlinkMiniBatchIntervalTraitInitProgram,
-          "Initialization for mini-batch interval inference")
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
-            .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
-            .add(FlinkStreamRuleSets.MINI_BATCH_RULES)
-            .build(),
-          "mini-batch interval rules"
-        )
-        .addProgram(
-          FlinkHepRuleSetProgramBuilder.newBuilder
-            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
-            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
-            .add(FlinkStreamRuleSets.PHYSICAL_REWRITE)
-            .build(),
-          "physical rewrite"
-        )
-        .build()
-    )
+//        .addProgram(
+//          new FlinkMiniBatchIntervalTraitInitProgram,
+//          "Initialization for mini-batch interval inference")
+//        .addProgram(
+//          FlinkHepRuleSetProgramBuilder.newBuilder
+//            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_SEQUENCE)
+//            .setHepMatchOrder(HepMatchOrder.TOP_DOWN)
+//            .add(FlinkStreamRuleSets.MINI_BATCH_RULES)
+//            .build(),
+//          "mini-batch interval rules"
+//        )
+//        .addProgram(
+//          FlinkHepRuleSetProgramBuilder.newBuilder
+//            .setHepRulesExecutionType(HEP_RULES_EXECUTION_TYPE.RULE_COLLECTION)
+//            .setHepMatchOrder(HepMatchOrder.BOTTOM_UP)
+//            .add(FlinkStreamRuleSets.PHYSICAL_REWRITE)
+//            .build(),
+//          "physical rewrite"
+//        )
+//        .build()
+//    )
 
     chainedProgram
   }
