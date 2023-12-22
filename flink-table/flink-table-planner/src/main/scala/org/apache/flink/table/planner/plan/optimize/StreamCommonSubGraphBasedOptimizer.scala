@@ -27,7 +27,7 @@ import org.apache.flink.table.planner.plan.`trait`.{MiniBatchInterval, MiniBatch
 import org.apache.flink.table.planner.plan.metadata.FlinkRelMetadataQuery
 import org.apache.flink.table.planner.plan.nodes.calcite.{LegacySink, Sink}
 import org.apache.flink.table.planner.plan.nodes.physical.stream.{StreamPhysicalDataStreamScan, StreamPhysicalIntermediateTableScan, StreamPhysicalLegacyTableSourceScan, StreamPhysicalRel, StreamPhysicalTableSourceScan}
-import org.apache.flink.table.planner.plan.optimize.program.{FlinkStreamProgram, StreamOptimizeContext}
+import org.apache.flink.table.planner.plan.optimize.program.{FlinkStreamProgram, FlinkStreamProgram2, StreamOptimizeContext}
 import org.apache.flink.table.planner.plan.schema.IntermediateRelTable
 import org.apache.flink.table.planner.plan.stats.FlinkStatistic
 import org.apache.flink.table.planner.plan.utils.ChangelogPlanUtils
@@ -84,14 +84,31 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
         isSinkBlock = true)
       block.setOptimizedPlan(optimizedTree)
 
-      sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
+//      val optimizedTree2 = optimizeTree2(
+//        block.getOptimizedPlan,
+//        block.isUpdateBeforeRequired,
+//        block.getMiniBatchInterval,
+//        isSinkBlock = true)
+//      block.setOptimizedPlan(optimizedTree)
+//
+//      return sinkBlocks
 
+//      sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
+//
       val dd = new OptimizeDAG(planner)
       val newBl = dd.optimizeDAG(sinkBlocks)
-      //    newBl.foreach(resetIntermediateResult)
-      //    // optimize recursively RelNodeBlock
-      //    newBl.foreach(b => optimizeBlock(b, isSinkBlock = true))
 
+      val optimizedTree2 = optimizeTree2(
+        newBl.head.getOptimizedPlan,
+        newBl.head.isUpdateBeforeRequired,
+        newBl.head.getMiniBatchInterval,
+        isSinkBlock = true)
+      newBl.head.setOptimizedPlan(optimizedTree2)
+
+      //      //    newBl.foreach(resetIntermediateResult)
+//      //    // optimize recursively RelNodeBlock
+//      //    newBl.foreach(b => optimizeBlock(b, isSinkBlock = true))
+//
       return newBl
     }
 
@@ -188,6 +205,49 @@ class StreamCommonSubGraphBasedOptimizer(planner: StreamPlanner)
     val calciteConfig = TableConfigUtils.getCalciteConfig(tableConfig)
     val programs = calciteConfig.getStreamProgram
       .getOrElse(FlinkStreamProgram.buildProgram(tableConfig))
+    Preconditions.checkNotNull(programs)
+
+    val context = unwrapContext(relNode)
+
+    programs.optimize(
+      relNode,
+      new StreamOptimizeContext() {
+
+        override def isBatchMode: Boolean = false
+
+        override def getTableConfig: TableConfig = tableConfig
+
+        override def getFunctionCatalog: FunctionCatalog = planner.functionCatalog
+
+        override def getCatalogManager: CatalogManager = planner.catalogManager
+
+        override def getModuleManager: ModuleManager = planner.moduleManager
+
+        override def getRexFactory: RexFactory = context.getRexFactory
+
+        override def getFlinkRelBuilder: FlinkRelBuilder = planner.createRelBuilder
+
+        override def isUpdateBeforeRequired: Boolean = updateBeforeRequired
+
+        def getMiniBatchInterval: MiniBatchInterval = miniBatchInterval
+
+        override def needFinalTimeIndicatorConversion: Boolean = isSinkBlock
+
+        override def getClassLoader: ClassLoader = context.getClassLoader
+      }
+    )
+  }
+
+  private def optimizeTree2(
+                            relNode: RelNode,
+                            updateBeforeRequired: Boolean,
+                            miniBatchInterval: MiniBatchInterval,
+                            isSinkBlock: Boolean): RelNode = {
+
+    val tableConfig = planner.getTableConfig
+    val calciteConfig = TableConfigUtils.getCalciteConfig(tableConfig)
+    val programs = calciteConfig.getStreamProgram
+      .getOrElse(FlinkStreamProgram2.buildProgram(tableConfig))
     Preconditions.checkNotNull(programs)
 
     val context = unwrapContext(relNode)

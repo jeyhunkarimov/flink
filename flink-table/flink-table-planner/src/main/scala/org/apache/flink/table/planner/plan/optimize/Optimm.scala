@@ -193,8 +193,7 @@ class Optimm {
         }
         createNewNode(deduplicate, children, providedTrait, requiredTrait, requester)
 
-      case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGlobalGroupAggregate |
-          _: StreamPhysicalLocalGroupAggregate =>
+      case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGlobalGroupAggregate =>
         // agg support all changes in input
         val children = visitChildren(rel, ModifyKindSetTrait.ALL_CHANGES)
         val inputModifyKindSet = getModifyKindSet(children.head)
@@ -269,6 +268,17 @@ class Optimm {
           ModifyKindSetTrait.ALL_CHANGES
         }
         createNewNode(limit, children, providedTrait, requiredTrait, requester)
+
+      case localAgg: StreamPhysicalLocalGroupAggregate  =>
+        // Rank and SortLimit supports consuming all changes
+        val children = visitChildren(localAgg, ModifyKindSetTrait.ALL_CHANGES)
+        val providedTrait = if (getModifyKindSet(children.head).isInsertOnly) {
+          ModifyKindSetTrait.INSERT_ONLY
+        } else {
+          ModifyKindSetTrait.ALL_CHANGES
+        }
+
+        createNewNode(localAgg, children, providedTrait, requiredTrait, requester)
 
       case _: StreamPhysicalRank | _: StreamPhysicalSortLimit =>
         // Rank and SortLimit supports consuming all changes
