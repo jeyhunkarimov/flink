@@ -105,13 +105,18 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
     def prope(rel: RelNode): Unit =
       rel match {
         case sc: StreamPhysicalIntermediateTableScan =>
-
           val name = sc.intermediateTable.getNames.get(0)
           val intermediateRelTable = createIntermediateRelTable(
             name,
             block.children(idx).getOptimizedPlan,
-            block.children(idx).getOptimizedPlan.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE).modifyKindSet,
-            block.isUpdateBeforeRequired)
+            block
+              .children(idx)
+              .getOptimizedPlan
+              .getTraitSet
+              .getTrait(ModifyKindSetTraitDef.INSTANCE)
+              .modifyKindSet,
+            block.isUpdateBeforeRequired
+          )
 
           sc.intermediateTable = intermediateRelTable
 
@@ -120,7 +125,6 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
         case ser: StreamPhysicalRel => ser.getInputs.foreach(e => prope(e))
         case _ => // do nothing
       }
-
 
     prope(block.getOptimizedPlan)
     val blockLogicalPlan = block.getPlan
@@ -157,7 +161,6 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
         block.setNewOutputNode(newTableScan)
         block.setOutputTableName(name)
     }
-
 
   }
 
