@@ -193,7 +193,7 @@ class Optimm {
         }
         createNewNode(deduplicate, children, providedTrait, requiredTrait, requester)
 
-      case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGlobalGroupAggregate =>
+      case _: StreamPhysicalGroupAggregate =>
         // agg support all changes in input
         val children = visitChildren(rel, ModifyKindSetTrait.ALL_CHANGES)
         val inputModifyKindSet = getModifyKindSet(children.head)
@@ -220,7 +220,9 @@ class Optimm {
         // table agg support all changes in input
         val children = visitChildren(dropUB, ModifyKindSetTrait.ALL_CHANGES)
         // table aggregate will produce all changes, including deletions
-        createNewNode(dropUB, children, ModifyKindSetTrait.ALL_CHANGES, requiredTrait, requester)
+        val inputModifyKindSet = getModifyKindSet(children.head)
+        val inputModifyKindSetTrait = new ModifyKindSetTrait(inputModifyKindSet)
+        createNewNode(dropUB, children, inputModifyKindSetTrait, requiredTrait, requester)
 
       case agg: StreamPhysicalPythonGroupAggregate =>
         // agg support all changes in input
@@ -252,7 +254,7 @@ class Optimm {
         createNewNode(window, children, providedTrait, requiredTrait, requester)
 
       case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
-          _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
+//          _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
           _: StreamPhysicalWindowDeduplicate =>
         // WindowAggregate, WindowRank, WindowDeduplicate support insert-only in input
         val children = visitChildren(rel, ModifyKindSetTrait.INSERT_ONLY)
@@ -269,16 +271,16 @@ class Optimm {
         }
         createNewNode(limit, children, providedTrait, requiredTrait, requester)
 
-      case localAgg: StreamPhysicalLocalGroupAggregate  =>
-        // Rank and SortLimit supports consuming all changes
-        val children = visitChildren(localAgg, ModifyKindSetTrait.ALL_CHANGES)
-        val providedTrait = if (getModifyKindSet(children.head).isInsertOnly) {
-          ModifyKindSetTrait.INSERT_ONLY
-        } else {
-          ModifyKindSetTrait.ALL_CHANGES
-        }
-
-        createNewNode(localAgg, children, providedTrait, requiredTrait, requester)
+//      case localAgg: StreamPhysicalLocalGroupAggregate =>
+//        // Rank and SortLimit supports consuming all changes
+//        val children = visitChildren(localAgg, ModifyKindSetTrait.ALL_CHANGES)
+//        val providedTrait = if (getModifyKindSet(children.head).isInsertOnly) {
+//          ModifyKindSetTrait.INSERT_ONLY
+//        } else {
+//          ModifyKindSetTrait.ALL_CHANGES
+//        }
+//
+//        createNewNode(localAgg, children, providedTrait, requiredTrait, requester)
 
       case _: StreamPhysicalRank | _: StreamPhysicalSortLimit =>
         // Rank and SortLimit supports consuming all changes
@@ -519,7 +521,7 @@ class Optimm {
           visitSink(sink, sinkRequiredTraits)
 
         case _: StreamPhysicalGroupAggregate | _: StreamPhysicalGroupTableAggregate |
-            _: StreamPhysicalGlobalGroupAggregate | _: StreamPhysicalLocalGroupAggregate |
+//            _: StreamPhysicalGlobalGroupAggregate | _: StreamPhysicalLocalGroupAggregate |
             _: StreamPhysicalLimit | _: StreamPhysicalPythonGroupAggregate |
             _: StreamPhysicalPythonGroupTableAggregate |
             _: StreamPhysicalGroupWindowAggregateBase =>
@@ -540,7 +542,7 @@ class Optimm {
           }
 
         case _: StreamPhysicalWindowAggregate | _: StreamPhysicalWindowRank |
-            _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
+//            _: StreamPhysicalGlobalWindowAggregate | _: StreamPhysicalLocalWindowAggregate |
             _: StreamPhysicalWindowDeduplicate | _: StreamPhysicalDeduplicate |
             _: StreamPhysicalTemporalSort | _: StreamPhysicalMatch |
             _: StreamPhysicalOverAggregate | _: StreamPhysicalIntervalJoin |
