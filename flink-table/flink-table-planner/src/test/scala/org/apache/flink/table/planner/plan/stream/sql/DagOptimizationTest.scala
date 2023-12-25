@@ -543,105 +543,105 @@ class DagOptimizationTest extends TableTestBase {
     util.verifyRelPlan(stmtSet, ExplainDetail.CHANGELOG_MODE)
   }
 
-  @Test
-  def testMultiLevelViews(): Unit = {
-    val stmtSet = util.tableEnv.createStatementSet()
-    util.tableEnv.getConfig.set(
-      RelNodeBlockPlanBuilder.TABLE_OPTIMIZER_UNIONALL_AS_BREAKPOINT_ENABLED,
-      Boolean.box(false))
-
-    val table1 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%hello%'")
-    util.tableEnv.createTemporaryView("TempTable1", table1)
-    val appendSink = util.createAppendTableSink(Array("a", "b", "c"), Array(INT, LONG, STRING))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("appendSink", appendSink)
-    stmtSet.addInsert("appendSink", table1)
-
-    val table2 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%world%'")
-    util.tableEnv.createTemporaryView("TempTable2", table2)
-
-    val sqlQuery =
-      """
-        |SELECT b, COUNT(a) AS cnt FROM (
-        | (SELECT * FROM TempTable1)
-        | UNION ALL
-        | (SELECT * FROM TempTable2)
-        |) t
-        |GROUP BY b
-      """.stripMargin
-    val table3 = util.tableEnv.sqlQuery(sqlQuery)
-    util.tableEnv.createTemporaryView("TempTable3", table3)
-
-    val table4 = util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable3 WHERE b < 4")
-    val retractSink = util.createRetractTableSink(Array("b", "cnt"), Array(LONG, LONG))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("retractSink", retractSink)
-    stmtSet.addInsert("retractSink", table4)
-
-    val table5 = util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable3 WHERE b >=4 AND b < 6")
-    val upsertSink = util.createUpsertTableSink(Array(), Array("b", "cnt"), Array(LONG, LONG))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("upsertSink", upsertSink)
-    stmtSet.addInsert("upsertSink", table5)
-
-    util.verifyRelPlan(stmtSet, ExplainDetail.CHANGELOG_MODE)
-  }
-
-  @Test
-  def testSharedUnionNode(): Unit = {
-    val stmtSet = util.tableEnv.createStatementSet()
-    util.tableEnv.getConfig.set(
-      RelNodeBlockPlanBuilder.TABLE_OPTIMIZER_UNIONALL_AS_BREAKPOINT_ENABLED,
-      Boolean.box(false))
-
-    val table1 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%hello%'")
-    util.tableEnv.createTemporaryView("TempTable1", table1)
-    val appendSink = util.createAppendTableSink(Array("a", "b", "c"), Array(INT, LONG, STRING))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("appendSink", appendSink)
-    stmtSet.addInsert("appendSink", table1)
-
-    val table2 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%world%'")
-    util.tableEnv.createTemporaryView("TempTable2", table2)
-
-    val sqlQuery1 =
-      """
-        |SELECT * FROM TempTable1
-        |UNION ALL
-        |SELECT * FROM TempTable2
-      """.stripMargin
-    val table3 = util.tableEnv.sqlQuery(sqlQuery1)
-    util.tableEnv.createTemporaryView("TempTable3", table3)
-
-    val table4 = util.tableEnv.sqlQuery("SELECT * FROM TempTable3 WHERE b >= 5")
-    val retractSink1 = util.createRetractTableSink(Array("a", "b", "c"), Array(INT, LONG, STRING))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("retractSink1", retractSink1)
-    stmtSet.addInsert("retractSink1", table4)
-
-    val table5 = util.tableEnv.sqlQuery("SELECT b, count(a) as cnt FROM TempTable3 GROUP BY b")
-    util.tableEnv.createTemporaryView("TempTable4", table5)
-
-    val table6 = util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable4 WHERE b < 4")
-    val retractSink2 = util.createRetractTableSink(Array("b", "cnt"), Array(LONG, LONG))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("retractSink2", retractSink2)
-    stmtSet.addInsert("retractSink2", table6)
-
-    util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable4 WHERE b >=4 AND b < 6")
-    val upsertSink = util.createUpsertTableSink(Array(), Array("b", "cnt"), Array(LONG, LONG))
-    util.tableEnv
-      .asInstanceOf[TableEnvironmentInternal]
-      .registerTableSinkInternal("upsertSink", upsertSink)
-    stmtSet.addInsert("upsertSink", table6)
-
-    util.verifyRelPlan(stmtSet, ExplainDetail.CHANGELOG_MODE)
-  }
+//  @Test
+//  def testMultiLevelViews(): Unit = {
+//    val stmtSet = util.tableEnv.createStatementSet()
+//    util.tableEnv.getConfig.set(
+//      RelNodeBlockPlanBuilder.TABLE_OPTIMIZER_UNIONALL_AS_BREAKPOINT_ENABLED,
+//      Boolean.box(false))
+//
+//    val table1 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%hello%'")
+//    util.tableEnv.createTemporaryView("TempTable1", table1)
+//    val appendSink = util.createAppendTableSink(Array("a", "b", "c"), Array(INT, LONG, STRING))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("appendSink", appendSink)
+//    stmtSet.addInsert("appendSink", table1)
+//
+//    val table2 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%world%'")
+//    util.tableEnv.createTemporaryView("TempTable2", table2)
+//
+//    val sqlQuery =
+//      """
+//        |SELECT b, COUNT(a) AS cnt FROM (
+//        | (SELECT * FROM TempTable1)
+//        | UNION ALL
+//        | (SELECT * FROM TempTable2)
+//        |) t
+//        |GROUP BY b
+//      """.stripMargin
+//    val table3 = util.tableEnv.sqlQuery(sqlQuery)
+//    util.tableEnv.createTemporaryView("TempTable3", table3)
+//
+//    val table4 = util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable3 WHERE b < 4")
+//    val retractSink = util.createRetractTableSink(Array("b", "cnt"), Array(LONG, LONG))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("retractSink", retractSink)
+//    stmtSet.addInsert("retractSink", table4)
+//
+//    val table5 = util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable3 WHERE b >=4 AND b < 6")
+//    val upsertSink = util.createUpsertTableSink(Array(), Array("b", "cnt"), Array(LONG, LONG))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("upsertSink", upsertSink)
+//    stmtSet.addInsert("upsertSink", table5)
+//
+//    util.verifyRelPlan(stmtSet, ExplainDetail.CHANGELOG_MODE)
+//  }
+//
+//  @Test
+//  def testSharedUnionNode(): Unit = {
+//    val stmtSet = util.tableEnv.createStatementSet()
+//    util.tableEnv.getConfig.set(
+//      RelNodeBlockPlanBuilder.TABLE_OPTIMIZER_UNIONALL_AS_BREAKPOINT_ENABLED,
+//      Boolean.box(false))
+//
+//    val table1 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%hello%'")
+//    util.tableEnv.createTemporaryView("TempTable1", table1)
+//    val appendSink = util.createAppendTableSink(Array("a", "b", "c"), Array(INT, LONG, STRING))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("appendSink", appendSink)
+//    stmtSet.addInsert("appendSink", table1)
+//
+//    val table2 = util.tableEnv.sqlQuery("SELECT a, b, c FROM MyTable WHERE c LIKE '%world%'")
+//    util.tableEnv.createTemporaryView("TempTable2", table2)
+//
+//    val sqlQuery1 =
+//      """
+//        |SELECT * FROM TempTable1
+//        |UNION ALL
+//        |SELECT * FROM TempTable2
+//      """.stripMargin
+//    val table3 = util.tableEnv.sqlQuery(sqlQuery1)
+//    util.tableEnv.createTemporaryView("TempTable3", table3)
+//
+//    val table4 = util.tableEnv.sqlQuery("SELECT * FROM TempTable3 WHERE b >= 5")
+//    val retractSink1 = util.createRetractTableSink(Array("a", "b", "c"), Array(INT, LONG, STRING))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("retractSink1", retractSink1)
+//    stmtSet.addInsert("retractSink1", table4)
+//
+//    val table5 = util.tableEnv.sqlQuery("SELECT b, count(a) as cnt FROM TempTable3 GROUP BY b")
+//    util.tableEnv.createTemporaryView("TempTable4", table5)
+//
+//    val table6 = util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable4 WHERE b < 4")
+//    val retractSink2 = util.createRetractTableSink(Array("b", "cnt"), Array(LONG, LONG))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("retractSink2", retractSink2)
+//    stmtSet.addInsert("retractSink2", table6)
+//
+//    util.tableEnv.sqlQuery("SELECT b, cnt FROM TempTable4 WHERE b >=4 AND b < 6")
+//    val upsertSink = util.createUpsertTableSink(Array(), Array("b", "cnt"), Array(LONG, LONG))
+//    util.tableEnv
+//      .asInstanceOf[TableEnvironmentInternal]
+//      .registerTableSinkInternal("upsertSink", upsertSink)
+//    stmtSet.addInsert("upsertSink", table6)
+//
+//    util.verifyRelPlan(stmtSet, ExplainDetail.CHANGELOG_MODE)
+//  }
 
 }

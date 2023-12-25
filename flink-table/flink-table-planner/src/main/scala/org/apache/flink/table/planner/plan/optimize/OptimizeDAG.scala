@@ -102,31 +102,46 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
         }
     }
 
-    def prope(rel: RelNode): Unit =
+    def prope(rel: RelNode): RelNode =
       rel match {
         case sc: StreamPhysicalIntermediateTableScan =>
           val name = sc.intermediateTable.getNames.get(0)
+          val targetBlock = block.children.filter(b => b.getOutputTableName == name)
+
+          val pl = targetBlock(0).getOptimizedPlan
           val intermediateRelTable = createIntermediateRelTable(
             name,
-            block.children(idx).getOptimizedPlan,
-            block
-              .children(idx)
-              .getOptimizedPlan
-              .getTraitSet
+            pl,
+            pl.getTraitSet
               .getTrait(ModifyKindSetTraitDef.INSTANCE)
               .modifyKindSet,
             block.isUpdateBeforeRequired
           )
 
-          sc.intermediateTable = intermediateRelTable
+//          sc.intermediateTable = intermediateRelTable
+          val newSc = new StreamPhysicalIntermediateTableScan(
+            sc.getCluster,
+            sc.getTraitSet,
+            intermediateRelTable,
+            sc.getRowType)
+//          parent.replaceInput(pos, newSc)
+//          val modifyKindSetTrait =
+//            pl.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
+////          sc.intermediateTable.relNode = pl
+//          sc.intermediateTable.modifyKindSet = modifyKindSetTrait.modifyKindSet
 
-          val newTableScan = wrapIntermediateRelTableToTableScan(intermediateRelTable, name)
+          newSc
+//          val newTableScan = wrapIntermediateRelTableToTableScan(intermediateRelTable, name)
 //          block.children(idx).setNewOutputNode(newTableScan)
-        case ser: StreamPhysicalRel => ser.getInputs.foreach(e => prope(e))
-        case _ => // do nothing
+        case ser: StreamPhysicalRel => {
+          val children = ser.getInputs.map(e => prope(e))
+          ser.copy(ser.getTraitSet, children)
+        }
+        case _ => throw new UnsupportedOperationException("ASDASDAS")
       }
 
-    prope(block.getOptimizedPlan)
+    val newOp = prope(block.getOptimizedPlan)
+    block.setOptimizedPlan(newOp)
     val blockLogicalPlan = block.getPlan
     val downstreamPlan =
       if (block.children.nonEmpty)
@@ -150,7 +165,9 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
           planner.catalogManager,
           downstreamPlan)
         val modifyKindSetTrait = optimizedPlan.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
-        val name = createUniqueIntermediateRelTableName
+        val name =
+          if (block.getOutputTableName == null) createUniqueIntermediateRelTableName
+          else block.getOutputTableName
         val intermediateRelTable = createIntermediateRelTable(
           name,
           optimizedPlan,
@@ -181,7 +198,10 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
     sinkBlocks.foreach(resetIntermediateResult)
 
     // optimize recursively RelNodeBlock
-    sinkBlocks.foreach(b => optimizeBlock(b, isSinkBlock = true))
+    sinkBlocks.foreach(
+      b => {
+        optimizeBlock(b, isSinkBlock = true)
+      })
 
     sinkBlocks.foreach(s => s.setNewOutputNode(s.getOptimizedPlan))
 //    val ch = ChangelogPlanUtils.getChangelogMode(
@@ -191,7 +211,7 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
 
   private def resetIntermediateResult(block: RelNodeBlock): Unit = {
     block.setNewOutputNode(null)
-    block.setOutputTableName(null)
+//    block.setOutputTableName(null)
 //    block.setOptimizedPlan(null)
 
     block.children.foreach {
