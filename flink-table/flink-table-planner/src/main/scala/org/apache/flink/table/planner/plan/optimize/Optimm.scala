@@ -754,12 +754,12 @@ class Optimm {
           createNewNode(rel, Some(List()), UpdateKindTrait.NONE)
 
         case scan: StreamPhysicalIntermediateTableScan =>
-          if (downstreamPlan.nonEmpty) {
-            val modifyKindSetTrait =
-              downstreamPlan.get.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
-            scan.intermediateTable.relNode = downstreamPlan.get
-            scan.intermediateTable.modifyKindSet = modifyKindSetTrait.modifyKindSet
-          }
+//          if (downstreamPlan.nonEmpty) {
+//            val modifyKindSetTrait =
+//              downstreamPlan.get.getTraitSet.getTrait(ModifyKindSetTraitDef.INSTANCE)
+//            scan.intermediateTable.relNode = downstreamPlan.get
+//            scan.intermediateTable.modifyKindSet = modifyKindSetTrait.modifyKindSet
+//          }
 
           val providedTrait = if (scan.intermediateTable.isUpdateBeforeRequired) {
             // we can't drop UPDATE_BEFORE if it is required by other parent blocks
