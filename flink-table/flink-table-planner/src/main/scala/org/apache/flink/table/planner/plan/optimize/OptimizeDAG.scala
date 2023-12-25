@@ -115,7 +115,7 @@ class OptimizeDAG(planner: StreamPlanner) extends StreamCommonSubGraphBasedOptim
             pl.getTraitSet
               .getTrait(ModifyKindSetTraitDef.INSTANCE)
               .modifyKindSet,
-            block.isUpdateBeforeRequired
+            targetBlock(0).isUpdateBeforeRequired
           )
 
 //          sc.intermediateTable = intermediateRelTable
