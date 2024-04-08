@@ -24,4 +24,7 @@ import org.apache.flink.annotation.Experimental;
  * A {@link NonPartitionedRuntimeContext} contains all execution information unrelated to partition.
  */
 @Experimental
-public interface NonPartitionedRuntimeContext {}
+public interface NonPartitionedRuntimeContext {
+    /** Get the {@link JobInfo} of this process function. */
+    JobInfo getJobInfo();
+}
