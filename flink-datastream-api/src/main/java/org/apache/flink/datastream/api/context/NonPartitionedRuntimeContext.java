@@ -19,6 +19,7 @@
 package org.apache.flink.datastream.api.context;
 
 import org.apache.flink.annotation.Experimental;
+import org.apache.flink.metrics.MetricGroup;
 
 /**
  * A {@link NonPartitionedRuntimeContext} contains all execution information unrelated to partition.
@@ -30,4 +31,7 @@ public interface NonPartitionedRuntimeContext {
 
     /** Get the {@link TaskInfo} of this process function. */
     TaskInfo getTaskInfo();
+
+    /** Get the metric group of this process function. */
+    MetricGroup getMetricGroup();
 }

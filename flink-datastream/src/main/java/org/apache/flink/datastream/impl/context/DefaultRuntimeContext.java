@@ -22,6 +22,7 @@ import org.apache.flink.datastream.api.context.JobInfo;
 import org.apache.flink.datastream.api.context.ProcessingTimeManager;
 import org.apache.flink.datastream.api.context.RuntimeContext;
 import org.apache.flink.datastream.api.context.TaskInfo;
+import org.apache.flink.metrics.MetricGroup;
 import org.apache.flink.streaming.api.operators.StreamingRuntimeContext;
 
 import java.util.function.Consumer;
@@ -37,6 +38,8 @@ public class DefaultRuntimeContext implements RuntimeContext {
 
     private final ProcessingTimeManager processingTimeManager;
 
+    private final MetricGroup metricGroup;
+
     public DefaultRuntimeContext(
             StreamingRuntimeContext operatorContext,
             int parallelism,
@@ -49,6 +52,7 @@ public class DefaultRuntimeContext implements RuntimeContext {
         this.taskInfo = new DefaultTaskInfo(parallelism, maxParallelism, taskName);
         this.stateManager = new DefaultStateManager(currentKeySupplier, currentKeySetter);
         this.processingTimeManager = processingTimeManager;
+        this.metricGroup = operatorContext.getMetricGroup();
     }
 
     @Override
@@ -68,5 +72,10 @@ public class DefaultRuntimeContext implements RuntimeContext {
 
     public ProcessingTimeManager getProcessingTimeManager() {
         return processingTimeManager;
+    }
+
+    @Override
+    public MetricGroup getMetricGroup() {
+        return metricGroup;
     }
 }
