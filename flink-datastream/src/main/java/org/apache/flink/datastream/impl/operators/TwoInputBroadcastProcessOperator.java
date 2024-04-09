@@ -62,7 +62,9 @@ public class TwoInputBroadcastProcessOperator<IN1, IN2, OUT>
                         operatorContext,
                         taskInfo.getNumberOfParallelSubtasks(),
                         taskInfo.getMaxNumberOfParallelSubtasks(),
-                        taskInfo.getTaskName());
+                        taskInfo.getTaskName(),
+                        this::currentKey,
+                        this::setCurrentKey);
         this.nonPartitionedContext = new DefaultNonPartitionedContext<>(context);
     }
 
@@ -91,5 +93,9 @@ public class TwoInputBroadcastProcessOperator<IN1, IN2, OUT>
         } else {
             userFunction.endBroadcastInput(nonPartitionedContext);
         }
+    }
+
+    protected Object currentKey() {
+        throw new UnsupportedOperationException("The key is only defined for keyed operator");
     }
 }

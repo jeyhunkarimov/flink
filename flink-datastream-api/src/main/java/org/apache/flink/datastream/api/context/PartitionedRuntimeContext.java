@@ -22,4 +22,7 @@ import org.apache.flink.annotation.Experimental;
 
 /** A {@link PartitionedRuntimeContext} contains all partition-wise execution information. */
 @Experimental
-public interface PartitionedRuntimeContext {}
+public interface PartitionedRuntimeContext {
+    /** Get the {@link StateManager} of this process function. */
+    StateManager getStateManager();
+}
