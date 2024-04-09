@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.flink.datastream.api.context;
+package org.apache.flink.datastream.impl.context;
 
-import org.apache.flink.annotation.Experimental;
+import org.junit.jupiter.api.Test;
 
-/**
- * A {@link NonPartitionedRuntimeContext} contains all execution information unrelated to partition.
- */
-@Experimental
-public interface NonPartitionedRuntimeContext {
-    /** Get the {@link JobInfo} of this process function. */
-    JobInfo getJobInfo();
+import static org.assertj.core.api.Assertions.assertThat;
 
-    /** Get the {@link TaskInfo} of this process function. */
-    TaskInfo getTaskInfo();
+/** Tests for {@link DefaultTaskInfo}. */
+class DefaultTaskInfoTest {
+    @Test
+    void testTaskInfo() {
+        DefaultTaskInfo taskInfo = new DefaultTaskInfo(1, 2, "taskName");
+        assertThat(taskInfo.getParallelism()).isEqualTo(1);
+        assertThat(taskInfo.getMaxParallelism()).isEqualTo(2);
+        assertThat(taskInfo.getTaskName()).isEqualTo("taskName");
+    }
 }

@@ -16,18 +16,36 @@
  * limitations under the License.
  */
 
-package org.apache.flink.datastream.api.context;
+package org.apache.flink.datastream.impl.context;
 
-import org.apache.flink.annotation.Experimental;
+import org.apache.flink.datastream.api.context.TaskInfo;
 
-/**
- * A {@link NonPartitionedRuntimeContext} contains all execution information unrelated to partition.
- */
-@Experimental
-public interface NonPartitionedRuntimeContext {
-    /** Get the {@link JobInfo} of this process function. */
-    JobInfo getJobInfo();
+/** Default implementation of {@link TaskInfo}. */
+public class DefaultTaskInfo implements TaskInfo {
+    private final int parallelism;
 
-    /** Get the {@link TaskInfo} of this process function. */
-    TaskInfo getTaskInfo();
+    private final int maxParallelism;
+
+    private final String taskName;
+
+    public DefaultTaskInfo(int parallelism, int maxParallelism, String taskName) {
+        this.parallelism = parallelism;
+        this.maxParallelism = maxParallelism;
+        this.taskName = taskName;
+    }
+
+    @Override
+    public int getParallelism() {
+        return parallelism;
+    }
+
+    @Override
+    public int getMaxParallelism() {
+        return maxParallelism;
+    }
+
+    @Override
+    public String getTaskName() {
+        return taskName;
+    }
 }
