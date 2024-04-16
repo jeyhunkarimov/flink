@@ -26,7 +26,7 @@ import org.apache.flink.datastream.api.function.TwoOutputApplyPartitionFunction;
  * partitions with two outputs.
  */
 @Experimental
-public interface TwoOutputNonPartitionedContext<OUT1, OUT2> extends RuntimeContext {
+public interface TwoOutputNonPartitionedContext<OUT1, OUT2> extends NonPartitionedRuntimeContext {
     /**
      * Apply a function to all partitions. For keyed stream, it will apply to all keys. For
      * non-keyed stream, it will apply to single partition.

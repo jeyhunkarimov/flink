@@ -19,17 +19,7 @@
 package org.apache.flink.datastream.api.context;
 
 import org.apache.flink.annotation.Experimental;
-import org.apache.flink.datastream.api.function.ApplyPartitionFunction;
 
-/**
- * This interface represents the context associated with all operations must be applied to all
- * partitions.
- */
+/** A {@link PartitionedRuntimeContext} contains all partition-wise execution information. */
 @Experimental
-public interface NonPartitionedContext<OUT> extends NonPartitionedRuntimeContext {
-    /**
-     * Apply a function to all partitions. For keyed stream, it will apply to all keys. For
-     * non-keyed stream, it will apply to single partition.
-     */
-    void applyToAllPartitions(ApplyPartitionFunction<OUT> applyPartitionFunction) throws Exception;
-}
+public interface PartitionedRuntimeContext {}

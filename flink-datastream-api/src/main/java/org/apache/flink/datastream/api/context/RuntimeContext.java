@@ -28,6 +28,4 @@ import org.apache.flink.annotation.Experimental;
  * etc.
  */
 @Experimental
-public interface RuntimeContext {
-    // TODO Introduce related methods in the subsequent RP.
-}
+public interface RuntimeContext extends PartitionedRuntimeContext, NonPartitionedRuntimeContext {}
