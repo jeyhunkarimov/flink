@@ -18,25 +18,62 @@
 
 package org.apache.flink.datastream.impl.context;
 
+import org.apache.flink.datastream.api.common.Collector;
 import org.apache.flink.datastream.api.context.JobInfo;
 import org.apache.flink.datastream.api.context.TaskInfo;
 import org.apache.flink.datastream.api.context.TwoOutputNonPartitionedContext;
 import org.apache.flink.datastream.api.function.TwoOutputApplyPartitionFunction;
 import org.apache.flink.metrics.MetricGroup;
 
+import java.util.Set;
+
 /** The default implementation of {@link TwoOutputNonPartitionedContext}. */
 public class DefaultTwoOutputNonPartitionedContext<OUT1, OUT2>
         implements TwoOutputNonPartitionedContext<OUT1, OUT2> {
-    private final DefaultRuntimeContext context;
+    protected final DefaultRuntimeContext context;
 
-    public DefaultTwoOutputNonPartitionedContext(DefaultRuntimeContext context) {
+    protected final Collector<OUT1> firstCollector;
+
+    protected final Collector<OUT2> secondCollector;
+
+    private final boolean isKeyed;
+
+    private final Set<Object> keySet;
+
+    public DefaultTwoOutputNonPartitionedContext(
+            DefaultRuntimeContext context,
+            Collector<OUT1> firstCollector,
+            Collector<OUT2> secondCollector,
+            boolean isKeyed,
+            Set<Object> keySet) {
         this.context = context;
+        this.firstCollector = firstCollector;
+        this.secondCollector = secondCollector;
+        this.isKeyed = isKeyed;
+        this.keySet = keySet;
     }
 
     @Override
     public void applyToAllPartitions(
-            TwoOutputApplyPartitionFunction<OUT1, OUT2> applyPartitionFunction) {
-        // TODO implements this method.
+            TwoOutputApplyPartitionFunction<OUT1, OUT2> applyPartitionFunction) throws Exception {
+        if (isKeyed) {
+            for (Object key : keySet) {
+                context.getStateManager()
+                        .executeInKeyContext(
+                                () -> {
+                                    try {
+                                        applyPartitionFunction.apply(
+                                                firstCollector, secondCollector, context);
+                                    } catch (Exception e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                },
+                                key);
+            }
+        } else {
+            // non-keyed operator has only one partition.
+            applyPartitionFunction.apply(firstCollector, secondCollector, context);
+        }
     }
 
     @Override

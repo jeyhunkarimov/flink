@@ -79,7 +79,7 @@ public class TwoOutputProcessOperator<IN, OUT_MAIN, OUT_SIDE>
                         this::currentKey,
                         this::setCurrentKey,
                         getProcessingTimeManager());
-        this.nonPartitionedContext = new DefaultTwoOutputNonPartitionedContext<>(context);
+        this.nonPartitionedContext = getNonPartitionedContext();
     }
 
     @Override
@@ -104,6 +104,11 @@ public class TwoOutputProcessOperator<IN, OUT_MAIN, OUT_SIDE>
 
     protected Object currentKey() {
         throw new UnsupportedOperationException("The key is only defined for keyed operator");
+    }
+
+    protected TwoOutputNonPartitionedContext<OUT_MAIN, OUT_SIDE> getNonPartitionedContext() {
+        return new DefaultTwoOutputNonPartitionedContext<>(
+                context, mainCollector, sideCollector, false, null);
     }
 
     protected ProcessingTimeManager getProcessingTimeManager() {
