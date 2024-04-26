@@ -19,6 +19,7 @@
 package org.apache.flink.datastream.impl.context;
 
 import org.apache.flink.datastream.impl.common.TestingTimestampCollector;
+import org.apache.flink.streaming.api.operators.collect.utils.MockOperatorStateStore;
 
 import org.junit.jupiter.api.Test;
 
@@ -48,6 +49,7 @@ class DefaultNonPartitionedContextTest {
                 new DefaultNonPartitionedContext<>(
                         new DefaultRuntimeContext(
                                 ContextTestUtils.createStreamingRuntimeContext(),
+                                new MockOperatorStateStore(),
                                 1,
                                 2,
                                 "mock-task",
@@ -87,6 +89,7 @@ class DefaultNonPartitionedContextTest {
                 new DefaultNonPartitionedContext<>(
                         new DefaultRuntimeContext(
                                 ContextTestUtils.createStreamingRuntimeContext(),
+                                new MockOperatorStateStore(),
                                 1,
                                 2,
                                 "mock-task",

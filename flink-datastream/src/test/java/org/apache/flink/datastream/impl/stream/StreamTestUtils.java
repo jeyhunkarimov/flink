@@ -18,6 +18,7 @@
 
 package org.apache.flink.datastream.impl.stream;
 
+import org.apache.flink.api.common.state.StateDeclaration;
 import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.dag.Transformation;
 import org.apache.flink.datastream.api.ExecutionEnvironment;
@@ -30,6 +31,9 @@ import org.apache.flink.datastream.api.function.TwoInputNonBroadcastStreamProces
 import org.apache.flink.datastream.api.function.TwoOutputStreamProcessFunction;
 import org.apache.flink.datastream.impl.ExecutionEnvironmentImpl;
 import org.apache.flink.streaming.api.graph.StreamGraph;
+
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,6 +64,21 @@ public final class StreamTestUtils {
     public static class NoOpOneInputStreamProcessFunction
             implements OneInputStreamProcessFunction<Integer, Long> {
 
+        private final Set<StateDeclaration> stateDeclarationSet;
+
+        public NoOpOneInputStreamProcessFunction(Set<StateDeclaration> stateDeclarationSet) {
+            this.stateDeclarationSet = stateDeclarationSet;
+        }
+
+        public NoOpOneInputStreamProcessFunction() {
+            this(new HashSet<>());
+        }
+
+        @Override
+        public Set<StateDeclaration> usesStates() {
+            return stateDeclarationSet;
+        }
+
         @Override
         public void processRecord(Integer record, Collector<Long> output, RuntimeContext ctx) {
             // do nothing.
@@ -69,6 +88,21 @@ public final class StreamTestUtils {
     /** An implementation of the {@link TwoOutputStreamProcessFunction} that does nothing. */
     public static class NoOpTwoOutputStreamProcessFunction
             implements TwoOutputStreamProcessFunction<Integer, Integer, Long> {
+
+        private final Set<StateDeclaration> stateDeclarationSet;
+
+        public NoOpTwoOutputStreamProcessFunction(Set<StateDeclaration> stateDeclarationSet) {
+            this.stateDeclarationSet = stateDeclarationSet;
+        }
+
+        public NoOpTwoOutputStreamProcessFunction() {
+            this(new HashSet<>());
+        }
+
+        @Override
+        public Set<StateDeclaration> usesStates() {
+            return stateDeclarationSet;
+        }
 
         @Override
         public void processRecord(
@@ -85,6 +119,30 @@ public final class StreamTestUtils {
      */
     public static class NoOpTwoInputNonBroadcastStreamProcessFunction
             implements TwoInputNonBroadcastStreamProcessFunction<Integer, Long, Long> {
+
+        private final Set<StateDeclaration> stateDeclarationSetFirstInput;
+        private final Set<StateDeclaration> stateDeclarationSetSecondInput;
+
+        public NoOpTwoInputNonBroadcastStreamProcessFunction(
+                Set<StateDeclaration> stateDeclarationSetFirstInput,
+                Set<StateDeclaration> stateDeclarationSetSecondInput) {
+            this.stateDeclarationSetFirstInput = stateDeclarationSetFirstInput;
+            this.stateDeclarationSetSecondInput = stateDeclarationSetSecondInput;
+        }
+
+        public NoOpTwoInputNonBroadcastStreamProcessFunction() {
+            this(new HashSet<>(), new HashSet<>());
+        }
+
+        @Override
+        public Set<StateDeclaration> usesStates() {
+            return stateDeclarationSetFirstInput;
+        }
+
+        @Override
+        public Set<StateDeclaration> usesStatesForSideInput() {
+            return stateDeclarationSetSecondInput;
+        }
 
         @Override
         public void processRecordFromFirstInput(
@@ -104,6 +162,31 @@ public final class StreamTestUtils {
      */
     public static class NoOpTwoInputBroadcastStreamProcessFunction
             implements TwoInputBroadcastStreamProcessFunction<Long, Integer, Long> {
+
+        private final Set<StateDeclaration> stateDeclarationSetFirstInput;
+        private final Set<StateDeclaration> stateDeclarationSetSecondInput;
+
+        public NoOpTwoInputBroadcastStreamProcessFunction(
+                Set<StateDeclaration> stateDeclarationSetFirstInput,
+                Set<StateDeclaration> stateDeclarationSetSecondInput) {
+            this.stateDeclarationSetFirstInput = stateDeclarationSetFirstInput;
+            this.stateDeclarationSetSecondInput = stateDeclarationSetSecondInput;
+        }
+
+        public NoOpTwoInputBroadcastStreamProcessFunction() {
+            this(new HashSet<>(), new HashSet<>());
+        }
+
+        @Override
+        public Set<StateDeclaration> usesStates() {
+            return stateDeclarationSetFirstInput;
+        }
+
+        @Override
+        public Set<StateDeclaration> usesStatesForSideInput() {
+            return stateDeclarationSetSecondInput;
+        }
+
         @Override
         public void processRecordFromNonBroadcastInput(
                 Long record, Collector<Long> output, RuntimeContext ctx) {

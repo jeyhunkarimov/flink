@@ -23,7 +23,7 @@ import org.apache.flink.api.common.functions.Function;
 
 /** Base class for all user defined process functions. */
 @Experimental
-public interface ProcessFunction extends Function {
+public interface ProcessFunction extends Function, OneInputUsedStates {
     /**
      * Initialization method for the function. It is called before the actual working methods (like
      * processRecord) and thus suitable for one time setup work.

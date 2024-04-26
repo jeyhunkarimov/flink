@@ -29,9 +29,8 @@ import java.io.Serializable;
  * individually.
  *
  * <p>For a reduce functions that work on an entire group at the same time (such as the
- * MapReduce/Hadoop-style reduce), see {@link GroupReduceFunction}. In the general case,
- * ReduceFunctions are considered faster, because they allow the system to use more efficient
- * execution strategies.
+ * MapReduce/Hadoop-style reduce), see GroupReduceFunction. In the general case, ReduceFunctions are
+ * considered faster, because they allow the system to use more efficient execution strategies.
  *
  * <p>The basic syntax for using a grouped ReduceFunction is as follows:
  *

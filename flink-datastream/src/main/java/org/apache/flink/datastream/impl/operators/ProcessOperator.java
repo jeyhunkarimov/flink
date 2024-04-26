@@ -59,6 +59,7 @@ public class ProcessOperator<IN, OUT>
         context =
                 new DefaultRuntimeContext(
                         operatorContext,
+                        getOperatorStateBackend(),
                         taskInfo.getNumberOfParallelSubtasks(),
                         taskInfo.getMaxNumberOfParallelSubtasks(),
                         taskInfo.getTaskName(),

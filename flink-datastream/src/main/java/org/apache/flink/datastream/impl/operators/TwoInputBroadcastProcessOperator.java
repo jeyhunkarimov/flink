@@ -63,6 +63,7 @@ public class TwoInputBroadcastProcessOperator<IN1, IN2, OUT>
         this.context =
                 new DefaultRuntimeContext(
                         operatorContext,
+                        getOperatorStateBackend(),
                         taskInfo.getNumberOfParallelSubtasks(),
                         taskInfo.getMaxNumberOfParallelSubtasks(),
                         taskInfo.getTaskName(),

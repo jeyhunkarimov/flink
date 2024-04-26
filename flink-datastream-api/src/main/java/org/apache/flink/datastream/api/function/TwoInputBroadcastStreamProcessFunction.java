@@ -28,7 +28,8 @@ import org.apache.flink.datastream.api.context.RuntimeContext;
  * stream.
  */
 @Experimental
-public interface TwoInputBroadcastStreamProcessFunction<IN1, IN2, OUT> extends ProcessFunction {
+public interface TwoInputBroadcastStreamProcessFunction<IN1, IN2, OUT>
+        extends ProcessFunction, SideInputUsedStates {
     /**
      * Process record from non-broadcast input and emit data through {@link Collector}.
      *

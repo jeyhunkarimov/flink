@@ -18,6 +18,7 @@
 
 package org.apache.flink.datastream.impl.context;
 
+import org.apache.flink.api.common.state.OperatorStateStore;
 import org.apache.flink.datastream.api.context.JobInfo;
 import org.apache.flink.datastream.api.context.ProcessingTimeManager;
 import org.apache.flink.datastream.api.context.RuntimeContext;
@@ -42,6 +43,7 @@ public class DefaultRuntimeContext implements RuntimeContext {
 
     public DefaultRuntimeContext(
             StreamingRuntimeContext operatorContext,
+            OperatorStateStore operatorStateStore,
             int parallelism,
             int maxParallelism,
             String taskName,
@@ -50,7 +52,9 @@ public class DefaultRuntimeContext implements RuntimeContext {
             ProcessingTimeManager processingTimeManager) {
         this.jobInfo = new DefaultJobInfo(operatorContext);
         this.taskInfo = new DefaultTaskInfo(parallelism, maxParallelism, taskName);
-        this.stateManager = new DefaultStateManager(currentKeySupplier, currentKeySetter);
+        this.stateManager =
+                new DefaultStateManager(
+                        currentKeySupplier, currentKeySetter, operatorContext, operatorStateStore);
         this.processingTimeManager = processingTimeManager;
         this.metricGroup = operatorContext.getMetricGroup();
     }

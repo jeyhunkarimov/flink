@@ -19,6 +19,7 @@
 package org.apache.flink.datastream.impl.operators;
 
 import org.apache.flink.api.common.TaskInfo;
+import org.apache.flink.api.common.state.OperatorStateStore;
 import org.apache.flink.datastream.api.context.ProcessingTimeManager;
 import org.apache.flink.datastream.api.context.TwoOutputNonPartitionedContext;
 import org.apache.flink.datastream.api.function.TwoOutputStreamProcessFunction;
@@ -69,10 +70,12 @@ public class TwoOutputProcessOperator<IN, OUT_MAIN, OUT_SIDE>
         this.mainCollector = getMainCollector();
         this.sideCollector = getSideCollector();
         StreamingRuntimeContext operatorContext = getRuntimeContext();
+        OperatorStateStore operatorStateStore = getOperatorStateBackend();
         TaskInfo taskInfo = operatorContext.getTaskInfo();
         this.context =
                 new DefaultRuntimeContext(
                         operatorContext,
+                        operatorStateStore,
                         taskInfo.getNumberOfParallelSubtasks(),
                         taskInfo.getMaxNumberOfParallelSubtasks(),
                         taskInfo.getTaskName(),
