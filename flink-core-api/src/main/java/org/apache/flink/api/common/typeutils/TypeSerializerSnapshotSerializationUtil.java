@@ -22,7 +22,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.core.io.VersionedIOReadableWritable;
 import org.apache.flink.core.memory.DataInputView;
 import org.apache.flink.core.memory.DataOutputView;
-import org.apache.flink.util.InstantiationUtil;
+import org.apache.flink.util.InstantiationUtilBase;
 import org.apache.flink.util.Preconditions;
 
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class TypeSerializerSnapshotSerializationUtil {
 
     /**
      * Reads from a data input view a {@link TypeSerializerSnapshot} that was previously written
-     * using {@link #writeSerializerSnapshot(DataOutputView, TypeSerializerSnapshot}.
+     * using {@link #writeSerializerSnapshot(DataOutputView, TypeSerializerSnapshot)}.
      *
      * @param in the data input view
      * @param userCodeClassLoader the user code class loader to use
@@ -67,9 +67,9 @@ public class TypeSerializerSnapshotSerializationUtil {
     public static <T> TypeSerializerSnapshot<T> readAndInstantiateSnapshotClass(
             DataInputView in, ClassLoader cl) throws IOException {
         Class<TypeSerializerSnapshot<T>> clazz =
-                InstantiationUtil.resolveClassByName(in, cl, TypeSerializerSnapshot.class);
+                InstantiationUtilBase.resolveClassByName(in, cl, TypeSerializerSnapshot.class);
 
-        return InstantiationUtil.instantiate(clazz);
+        return InstantiationUtilBase.instantiate(clazz);
     }
 
     /** Utility serialization proxy for a {@link TypeSerializerSnapshot}. */

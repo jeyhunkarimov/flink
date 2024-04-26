@@ -29,7 +29,6 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.typeutils.TypeExtractor;
 import org.apache.flink.util.FlinkRuntimeException;
 
-import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
@@ -79,55 +78,9 @@ import java.util.Map;
  * @param <T> The type represented by this type information.
  */
 @Public
-public abstract class TypeInformation<T> implements Serializable {
+public abstract class TypeInformation<T> implements TypeDescriptor<T> {
 
     private static final long serialVersionUID = -7742311969684489493L;
-
-    /**
-     * Checks if this type information represents a basic type. Basic types are defined in {@link
-     * BasicTypeInfo} and are primitives, their boxing types, Strings, Date, Void, ...
-     *
-     * @return True, if this type information describes a basic type, false otherwise.
-     */
-    @PublicEvolving
-    public abstract boolean isBasicType();
-
-    /**
-     * Checks if this type information represents a Tuple type. Tuple types are subclasses of the
-     * Java API tuples.
-     *
-     * @return True, if this type information describes a tuple type, false otherwise.
-     */
-    @PublicEvolving
-    public abstract boolean isTupleType();
-
-    /**
-     * Gets the arity of this type - the number of fields without nesting.
-     *
-     * @return Gets the number of fields in this type without nesting.
-     */
-    @PublicEvolving
-    public abstract int getArity();
-
-    /**
-     * Gets the number of logical fields in this type. This includes its nested and transitively
-     * nested fields, in the case of composite types. In the example above, the OuterType type has
-     * three fields in total.
-     *
-     * <p>The total number of fields must be at least 1.
-     *
-     * @return The number of fields in this type, including its sub-fields (for composite types)
-     */
-    @PublicEvolving
-    public abstract int getTotalFields();
-
-    /**
-     * Gets the class of the type represented by this type information.
-     *
-     * @return The class of the type represented by this type information.
-     */
-    @PublicEvolving
-    public abstract Class<T> getTypeClass();
 
     /**
      * Optional method for giving Flink's type extraction system information about the mapping of a
@@ -151,19 +104,10 @@ public abstract class TypeInformation<T> implements Serializable {
     }
 
     /**
-     * Checks whether this type can be used as a key. As a bare minimum, types have to be hashable
-     * and comparable to be keys.
-     *
-     * @return True, if the type can be used as a key, false otherwise.
-     */
-    @PublicEvolving
-    public abstract boolean isKeyType();
-
-    /**
      * Checks whether this type can be used as a key for sorting. The order produced by sorting this
      * type must be meaningful.
      */
-    @PublicEvolving
+    @Override
     public boolean isSortKeyType() {
         return isKeyType();
     }
@@ -208,14 +152,6 @@ public abstract class TypeInformation<T> implements Serializable {
 
     @Override
     public abstract int hashCode();
-
-    /**
-     * Returns true if the given object can be equaled with this object. If not, it returns false.
-     *
-     * @param obj Object which wants to take part in the equality relation
-     * @return true if obj can be equaled with this, otherwise false
-     */
-    public abstract boolean canEqual(Object obj);
 
     // ------------------------------------------------------------------------
 
