@@ -200,7 +200,24 @@ public interface WatermarkStrategy<T>
                 !(updateInterval.isZero() || updateInterval.isNegative()),
                 "updateInterval must be positive");
         return new WatermarksWithWatermarkAlignment<T>(
-                this, watermarkGroup, maxAllowedWatermarkDrift, updateInterval);
+                this, watermarkGroup, maxAllowedWatermarkDrift, updateInterval, null);
+    }
+
+    @PublicEvolving
+    default WatermarkStrategy<T> withWatermarkAlignment(
+            String watermarkGroup, Duration maxAllowedWatermarkDrift, Duration updateInterval, WatermarkCombiner watermarkCombiner) {
+        checkNotNull(watermarkCombiner, "watermarkCombiner cannot be null");
+        checkNotNull(watermarkGroup, "watermarkGroup cannot be null");
+        checkNotNull(maxAllowedWatermarkDrift, "maxAllowedWatermarkDrift cannot be null");
+        checkNotNull(updateInterval, "updateInterval cannot be null");
+        checkArgument(
+                !maxAllowedWatermarkDrift.isNegative(),
+                "maxAllowedWatermarkDrift must be greater than or equal to zero");
+        checkArgument(
+                !(updateInterval.isZero() || updateInterval.isNegative()),
+                "updateInterval must be positive");
+        return new WatermarksWithWatermarkAlignment<T>(
+                this, watermarkGroup, maxAllowedWatermarkDrift, updateInterval, watermarkCombiner);
     }
 
     // ------------------------------------------------------------------------

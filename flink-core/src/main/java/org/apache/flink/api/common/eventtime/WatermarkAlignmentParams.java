@@ -20,22 +20,27 @@ package org.apache.flink.api.common.eventtime;
 
 import org.apache.flink.annotation.PublicEvolving;
 
+import javax.annotation.Nullable;
+
 import java.io.Serializable;
 
 /** Configuration parameters for watermark alignment. */
 @PublicEvolving
 public final class WatermarkAlignmentParams implements Serializable {
     public static final WatermarkAlignmentParams WATERMARK_ALIGNMENT_DISABLED =
-            new WatermarkAlignmentParams(Long.MAX_VALUE, "", 0);
+            new WatermarkAlignmentParams(Long.MAX_VALUE, "", 0, null);
     private final long maxAllowedWatermarkDrift;
     private final long updateInterval;
     private final String watermarkGroup;
 
+    private final WatermarkCombiner watermarkCombiner;
+
     public WatermarkAlignmentParams(
-            long maxAllowedWatermarkDrift, String watermarkGroup, long updateInterval) {
+            long maxAllowedWatermarkDrift, String watermarkGroup, long updateInterval, @Nullable WatermarkCombiner watermarkCombiner) {
         this.maxAllowedWatermarkDrift = maxAllowedWatermarkDrift;
         this.watermarkGroup = watermarkGroup;
         this.updateInterval = updateInterval;
+        this.watermarkCombiner = watermarkCombiner;
     }
 
     public boolean isEnabled() {
@@ -52,5 +57,9 @@ public final class WatermarkAlignmentParams implements Serializable {
 
     public long getUpdateInterval() {
         return updateInterval;
+    }
+
+    public WatermarkCombiner getWatermarkCombiner() {
+        return watermarkCombiner;
     }
 }

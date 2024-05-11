@@ -23,6 +23,7 @@ import org.apache.flink.annotation.VisibleForTesting;
 import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.eventtime.Watermark;
 import org.apache.flink.api.common.eventtime.WatermarkAlignmentParams;
+import org.apache.flink.api.common.eventtime.WatermarkCombiner;
 import org.apache.flink.api.connector.source.DynamicFilteringInfo;
 import org.apache.flink.api.connector.source.DynamicParallelismInference;
 import org.apache.flink.api.connector.source.Source;
@@ -63,11 +64,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -98,7 +102,8 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         implements OperatorCoordinator {
     private static final Logger LOG = LoggerFactory.getLogger(SourceCoordinator.class);
 
-    private final WatermarkAggregator<Integer> combinedWatermark = new WatermarkAggregator<>();
+    private final WatermarkCombiner watermarkCombiner;
+    private final WatermarkAggregator<Integer> combinedWatermark;
 
     private final WatermarkAlignmentParams watermarkAlignmentParams;
 
@@ -153,7 +158,10 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         this.context = context;
         this.coordinatorStore = coordinatorStore;
         this.watermarkAlignmentParams = watermarkAlignmentParams;
+        this.watermarkCombiner = watermarkAlignmentParams.getWatermarkCombiner();
         this.coordinatorListeningID = coordinatorListeningID;
+
+        combinedWatermark = new WatermarkAggregator<>();
 
         if (watermarkAlignmentParams.isEnabled()
                 && context.isConcurrentExecutionAttemptsSupported()) {
@@ -173,6 +181,8 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                         watermarkAlignmentParams.getWatermarkGroup(),
                         (value) -> {
                             WatermarkAggregator aggregator = (WatermarkAggregator) value;
+                            int i = aggregator.watermarks.size();
+//                            System.out.println("JJJJJJJ " +  i);
                             return new Watermark(
                                     aggregator.getAggregatedWatermark().getTimestamp());
                         });
@@ -274,7 +284,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         if (watermarkAlignmentParams.isEnabled()) {
             LOG.info("Starting schedule the period announceCombinedWatermark task");
             coordinatorStore.putIfAbsent(
-                    watermarkAlignmentParams.getWatermarkGroup(), new WatermarkAggregator<>());
+                    watermarkAlignmentParams.getWatermarkGroup(), this.watermarkCombiner == null ? new WatermarkAggregator<>() : new WatermarkAggregatorWithCombiner<>(this.watermarkCombiner));
             context.schedulePeriodTask(
                     this::announceCombinedWatermark,
                     watermarkAlignmentParams.getUpdateInterval(),
@@ -697,10 +707,10 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                                 coordinatorStore.computeIfPresent(
                                         watermarkAlignmentParams.getWatermarkGroup(),
                                         (key, oldValue) -> {
-                                            WatermarkAggregator<String> watermarkAggregator =
-                                                    (WatermarkAggregator<String>) oldValue;
+                                            WatermarkAggregatorWithCombiner<String> watermarkAggregator =
+                                                    (WatermarkAggregatorWithCombiner<String>) oldValue;
                                             watermarkAggregator.aggregate(
-                                                    operatorName, newCombinedWatermark);
+                                                    operatorName, newCombinedWatermark, this);
                                             return watermarkAggregator;
                                         }));
     }
@@ -771,6 +781,10 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
 
         private final Watermark watermark;
 
+        public Watermark getWatermark() {
+            return watermark;
+        }
+
         public WatermarkElement(Watermark watermark) {
             this.watermark = watermark;
         }
@@ -797,10 +811,10 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         }
     }
 
-    /** The aggregated watermark is the smallest watermark of all keys. */
+        /** The aggregated watermark is the smallest watermark of all keys. */
     static class WatermarkAggregator<T> {
 
-        private final Map<T, WatermarkElement> watermarks = new HashMap<>();
+        protected final Map<T, WatermarkElement> watermarks = new LinkedHashMap<>();
 
         private final HeapPriorityQueue<WatermarkElement> orderedWatermarks =
                 new HeapPriorityQueue<>(PriorityComparator.forPriorityComparableObjects(), 10);
@@ -840,5 +854,72 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                     ? DEFAULT_WATERMARK
                     : aggregatedWatermarkElement.watermark;
         }
+    }
+
+    class WatermarkCombinerWrapper implements WatermarkCombiner {
+        private WatermarkCombiner combiner;
+        private Map<Object, Integer> registeregChannels = new HashMap<>();
+
+
+        WatermarkCombinerWrapper(WatermarkCombiner combiner) {
+            this.combiner = combiner;
+        }
+        public synchronized Integer getNumberOfInputChannels() {
+            return registeregChannels.keySet().size();
+        }
+
+        public synchronized Integer getIndexOfCurrentChannel(Object caller) {
+            Integer res = registeregChannels.get(caller);
+            if (res == null) {
+                registeregChannels.put(caller, registeregChannels.size());
+                return registeregChannels.get(caller);
+            } else {
+                return res;
+            }
+        }
+
+        @Override
+        public Watermark combineWatermark(Watermark watermark, Context context) {
+            return combiner.combineWatermark(watermark, context);
+        }
+
+        @Override
+        public Watermark getAggregatedWatermark() {
+            return combiner.getAggregatedWatermark();
+        }
+    }
+
+    class WatermarkAggregatorWithCombiner<T> extends WatermarkAggregator<T> {
+        private WatermarkCombinerWrapper combiner;
+        public WatermarkAggregatorWithCombiner(WatermarkCombiner combiner) {
+            this.combiner = new WatermarkCombinerWrapper(combiner);
+        }
+
+        public Optional<Watermark> aggregate(T key, Watermark watermark, SourceCoordinator sourceCoordinator) {
+            WatermarkElement watermarkElement = new WatermarkElement(watermark);
+            watermarks.put(key, watermarkElement);
+
+
+            return Optional.of(combiner.combineWatermark(
+                    watermark,
+                    new WatermarkCombiner.Context() {
+                        @Override
+                        public int getNumberOfInputChannels() {
+                            return combiner.getNumberOfInputChannels();
+                        }
+
+                        @Override
+                        public int getIndexOfCurrentChannel() {
+                            System.out.println("JEYY " + this);
+                            return combiner.getIndexOfCurrentChannel(sourceCoordinator);
+                        }
+                    }));
+        }
+
+        @Override
+        public Watermark getAggregatedWatermark() {
+            return combiner.getAggregatedWatermark();
+        }
+
     }
 }

@@ -36,15 +36,19 @@ final class WatermarksWithWatermarkAlignment<T> implements WatermarkStrategy<T> 
 
     private final Duration updateInterval;
 
+    private final WatermarkCombiner combiner;
+
     public WatermarksWithWatermarkAlignment(
             WatermarkStrategy<T> strategy,
             String watermarkGroup,
             Duration maxAllowedWatermarkDrift,
-            Duration updateInterval) {
+            Duration updateInterval,
+            WatermarkCombiner combiner) {
         this.strategy = strategy;
         this.watermarkGroup = watermarkGroup;
         this.maxAllowedWatermarkDrift = maxAllowedWatermarkDrift;
         this.updateInterval = updateInterval;
+        this.combiner = combiner;
     }
 
     @Override
@@ -61,6 +65,6 @@ final class WatermarksWithWatermarkAlignment<T> implements WatermarkStrategy<T> 
     @Override
     public WatermarkAlignmentParams getAlignmentParameters() {
         return new WatermarkAlignmentParams(
-                maxAllowedWatermarkDrift.toMillis(), watermarkGroup, updateInterval.toMillis());
+                maxAllowedWatermarkDrift.toMillis(), watermarkGroup, updateInterval.toMillis(), combiner);
     }
 }

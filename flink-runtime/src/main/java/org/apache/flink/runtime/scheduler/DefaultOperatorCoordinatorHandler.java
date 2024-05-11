@@ -104,6 +104,7 @@ public class DefaultOperatorCoordinatorHandler implements OperatorCoordinatorHan
         // needs to cause a job failure.
 
         final Execution exec = executionGraph.getRegisteredExecutions().get(taskExecutionId);
+
         if (exec == null
                 || exec.getState() != ExecutionState.RUNNING
                         && exec.getState() != ExecutionState.INITIALIZING) {
