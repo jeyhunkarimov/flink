@@ -52,7 +52,7 @@ class SourceCoordinatorAlignmentTest extends SourceCoordinatorTestBase {
         try (AutoCloseableRegistry closeableRegistry = new AutoCloseableRegistry()) {
             SourceCoordinator<?, ?> sourceCoordinator1 =
                     getAndStartNewSourceCoordinator(
-                            new WatermarkAlignmentParams(1000L, "group1", Long.MAX_VALUE),
+                            new WatermarkAlignmentParams(1000L, "group1", Long.MAX_VALUE, null),
                             closeableRegistry);
 
             int subtask0 = 0;
@@ -75,7 +75,7 @@ class SourceCoordinatorAlignmentTest extends SourceCoordinatorTestBase {
         try (AutoCloseableRegistry closeableRegistry = new AutoCloseableRegistry()) {
             SourceCoordinator<?, ?> sourceCoordinator1 =
                     getAndStartNewSourceCoordinator(
-                            new WatermarkAlignmentParams(1000L, "group1", Long.MAX_VALUE),
+                            new WatermarkAlignmentParams(1000L, "group1", Long.MAX_VALUE, null),
                             closeableRegistry);
 
             int subtask0 = 0;
@@ -121,12 +121,12 @@ class SourceCoordinatorAlignmentTest extends SourceCoordinatorTestBase {
             long maxDrift = 1000L;
             SourceCoordinator<?, ?> sourceCoordinator1 =
                     getAndStartNewSourceCoordinator(
-                            new WatermarkAlignmentParams(maxDrift, "group1", Long.MAX_VALUE),
+                            new WatermarkAlignmentParams(maxDrift, "group1", Long.MAX_VALUE, null),
                             closeableRegistry);
 
             SourceCoordinator<?, ?> sourceCoordinator2 =
                     getAndStartNewSourceCoordinator(
-                            new WatermarkAlignmentParams(maxDrift, "group2", Long.MAX_VALUE),
+                            new WatermarkAlignmentParams(maxDrift, "group2", Long.MAX_VALUE, null),
                             closeableRegistry);
 
             int subtask0 = 0;
@@ -157,7 +157,7 @@ class SourceCoordinatorAlignmentTest extends SourceCoordinatorTestBase {
     void testAnnounceCombinedWatermarkWithoutStart() throws Exception {
         long maxDrift = 1000L;
         WatermarkAlignmentParams params =
-                new WatermarkAlignmentParams(maxDrift, "group1", maxDrift);
+                new WatermarkAlignmentParams(maxDrift, "group1", maxDrift, null);
 
         final Source<Integer, MockSourceSplit, Set<MockSourceSplit>> mockSource =
                 createMockSource();
@@ -210,7 +210,7 @@ class SourceCoordinatorAlignmentTest extends SourceCoordinatorTestBase {
         long maxDrift = 1000L;
 
         WatermarkAlignmentParams params =
-                new WatermarkAlignmentParams(maxDrift, "group1", maxDrift);
+                new WatermarkAlignmentParams(maxDrift, "group1", maxDrift, null);
 
         final Source<Integer, MockSourceSplit, Set<MockSourceSplit>> mockSource =
                 createMockSource();

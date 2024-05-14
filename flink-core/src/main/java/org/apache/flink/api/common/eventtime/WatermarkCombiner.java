@@ -38,5 +38,26 @@ public interface WatermarkCombiner extends Serializable {
     interface Context {
         int getNumberOfInputChannels();
         int getIndexOfCurrentChannel();
+
+        boolean isSubtaskContext();
+    }
+
+    static Context createContext(int numberOfInputChannels, int indexOfCurrentChannel, boolean isSubtaskContext) {
+        return new Context() {
+            @Override
+            public int getNumberOfInputChannels() {
+                return numberOfInputChannels;
+            }
+
+            @Override
+            public int getIndexOfCurrentChannel() {
+                return indexOfCurrentChannel;
+            }
+
+            @Override
+            public boolean isSubtaskContext() {
+                return isSubtaskContext;
+            }
+        };
     }
 }

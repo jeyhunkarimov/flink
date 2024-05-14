@@ -29,12 +29,13 @@ import java.util.Optional;
 
 public class DefaultWatermarkCombiner implements WatermarkCombiner {
 
-    protected final Map<Object, SourceCoordinator.WatermarkElement> watermarks = new LinkedHashMap<>();
+    protected final Map<Integer, SourceCoordinator.WatermarkElement> watermarks = new LinkedHashMap<>();
 
     private final HeapPriorityQueue<SourceCoordinator.WatermarkElement> orderedWatermarks =
             new HeapPriorityQueue<>(PriorityComparator.forPriorityComparableObjects(), 10);
 
     private static final Watermark DEFAULT_WATERMARK = new Watermark(Long.MIN_VALUE);
+
 
     @Override
     public Watermark combineWatermark(Watermark watermark, Context context) {

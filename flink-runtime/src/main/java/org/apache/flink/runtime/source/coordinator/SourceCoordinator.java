@@ -66,6 +66,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -158,10 +159,10 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         this.context = context;
         this.coordinatorStore = coordinatorStore;
         this.watermarkAlignmentParams = watermarkAlignmentParams;
-        this.watermarkCombiner = watermarkAlignmentParams.getWatermarkCombiner();
+        this.watermarkCombiner = watermarkAlignmentParams.getWatermarkCombiner() == null ? new DefaultWatermarkCombiner() : watermarkAlignmentParams.getWatermarkCombiner();
         this.coordinatorListeningID = coordinatorListeningID;
 
-        combinedWatermark = new WatermarkAggregator<>();
+        combinedWatermark = new WatermarkAggregator<>(watermarkCombiner, true);
 
         if (watermarkAlignmentParams.isEnabled()
                 && context.isConcurrentExecutionAttemptsSupported()) {
@@ -181,7 +182,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                         watermarkAlignmentParams.getWatermarkGroup(),
                         (value) -> {
                             WatermarkAggregator aggregator = (WatermarkAggregator) value;
-                            int i = aggregator.watermarks.size();
+//                            int i = aggregator.watermarks.size();
 //                            System.out.println("JJJJJJJ " +  i);
                             return new Watermark(
                                     aggregator.getAggregatedWatermark().getTimestamp());
@@ -199,7 +200,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
             maxAllowedWatermark = Watermark.MAX_WATERMARK.getTimestamp();
         }
 
-        Set<Integer> subTaskIds = combinedWatermark.keySet();
+        List<Integer> subTaskIds = combinedWatermark.keys();
         LOG.info(
                 "Distributing maxAllowedWatermark={} of group={} to subTaskIds={} for source {}.",
                 maxAllowedWatermark,
@@ -284,7 +285,7 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         if (watermarkAlignmentParams.isEnabled()) {
             LOG.info("Starting schedule the period announceCombinedWatermark task");
             coordinatorStore.putIfAbsent(
-                    watermarkAlignmentParams.getWatermarkGroup(), this.watermarkCombiner == null ? new WatermarkAggregator<>() : new WatermarkAggregatorWithCombiner<>(this.watermarkCombiner));
+                    watermarkAlignmentParams.getWatermarkGroup(),  new WatermarkAggregator<>(this.watermarkCombiner, false));
             context.schedulePeriodTask(
                     this::announceCombinedWatermark,
                     watermarkAlignmentParams.getUpdateInterval(),
@@ -707,10 +708,9 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
                                 coordinatorStore.computeIfPresent(
                                         watermarkAlignmentParams.getWatermarkGroup(),
                                         (key, oldValue) -> {
-                                            WatermarkAggregatorWithCombiner<String> watermarkAggregator =
-                                                    (WatermarkAggregatorWithCombiner<String>) oldValue;
-                                            watermarkAggregator.aggregate(
-                                                    operatorName, newCombinedWatermark, this);
+                                            WatermarkAggregator<String> watermarkAggregator =
+                                                    (WatermarkAggregator<String>) oldValue;
+                                            watermarkAggregator.aggregate(operatorName, newCombinedWatermark);
                                             return watermarkAggregator;
                                         }));
     }
@@ -814,13 +814,21 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         /** The aggregated watermark is the smallest watermark of all keys. */
     static class WatermarkAggregator<T> {
 
-        protected final Map<T, WatermarkElement> watermarks = new LinkedHashMap<>();
+        protected final List<T> keys = new ArrayList<>();
 
-        private final HeapPriorityQueue<WatermarkElement> orderedWatermarks =
-                new HeapPriorityQueue<>(PriorityComparator.forPriorityComparableObjects(), 10);
+        private final WatermarkCombiner watermarkCombiner;
 
-        private static final Watermark DEFAULT_WATERMARK = new Watermark(Long.MIN_VALUE);
+        private final boolean isSubtastAggregator;
 
+        public WatermarkAggregator() {
+            this(new DefaultWatermarkCombiner(), false);
+        }
+
+
+            public WatermarkAggregator(WatermarkCombiner watermarkCombiner, boolean isSubtastAggregator) {
+            this.watermarkCombiner = watermarkCombiner;
+            this.isSubtastAggregator = isSubtastAggregator;
+        }
         /**
          * Update the {@link Watermark} for the given {@code key)}.
          *
@@ -829,30 +837,28 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
          */
         public Optional<Watermark> aggregate(T key, Watermark watermark) {
             Watermark oldAggregatedWatermark = getAggregatedWatermark();
-
-            WatermarkElement watermarkElement = new WatermarkElement(watermark);
-            WatermarkElement oldWatermarkElement = watermarks.put(key, watermarkElement);
-            if (oldWatermarkElement != null) {
-                orderedWatermarks.remove(oldWatermarkElement);
+            if (!keys.contains(key)) {
+                keys.add(key);
             }
-            orderedWatermarks.add(watermarkElement);
 
-            Watermark newAggregatedWatermark = getAggregatedWatermark();
+
+            Watermark newAggregatedWatermark = watermarkCombiner.combineWatermark(watermark, generateContext(key));
             if (newAggregatedWatermark.equals(oldAggregatedWatermark)) {
                 return Optional.empty();
             }
             return Optional.of(newAggregatedWatermark);
         }
 
-        public Set<T> keySet() {
-            return watermarks.keySet();
+        private WatermarkCombiner.Context generateContext(T key) {
+            return WatermarkCombiner.createContext(keys.size(), keys.indexOf(key), isSubtastAggregator);
+        }
+
+        public List<T> keys() {
+            return keys;
         }
 
         public Watermark getAggregatedWatermark() {
-            WatermarkElement aggregatedWatermarkElement = orderedWatermarks.peek();
-            return aggregatedWatermarkElement == null
-                    ? DEFAULT_WATERMARK
-                    : aggregatedWatermarkElement.watermark;
+            return watermarkCombiner.getAggregatedWatermark();
         }
     }
 
@@ -889,37 +895,37 @@ public class SourceCoordinator<SplitT extends SourceSplit, EnumChkT>
         }
     }
 
-    class WatermarkAggregatorWithCombiner<T> extends WatermarkAggregator<T> {
-        private WatermarkCombinerWrapper combiner;
-        public WatermarkAggregatorWithCombiner(WatermarkCombiner combiner) {
-            this.combiner = new WatermarkCombinerWrapper(combiner);
-        }
-
-        public Optional<Watermark> aggregate(T key, Watermark watermark, SourceCoordinator sourceCoordinator) {
-            WatermarkElement watermarkElement = new WatermarkElement(watermark);
-            watermarks.put(key, watermarkElement);
-
-
-            return Optional.of(combiner.combineWatermark(
-                    watermark,
-                    new WatermarkCombiner.Context() {
-                        @Override
-                        public int getNumberOfInputChannels() {
-                            return combiner.getNumberOfInputChannels();
-                        }
-
-                        @Override
-                        public int getIndexOfCurrentChannel() {
-                            System.out.println("JEYY " + this);
-                            return combiner.getIndexOfCurrentChannel(sourceCoordinator);
-                        }
-                    }));
-        }
-
-        @Override
-        public Watermark getAggregatedWatermark() {
-            return combiner.getAggregatedWatermark();
-        }
-
-    }
+//    class WatermarkAggregatorWithCombiner<T> extends WatermarkAggregator<T> {
+//        private WatermarkCombinerWrapper combiner;
+//        public WatermarkAggregatorWithCombiner(WatermarkCombiner combiner) {
+//            this.combiner = new WatermarkCombinerWrapper(combiner);
+//        }
+//
+//        public Optional<Watermark> aggregate(T key, Watermark watermark, SourceCoordinator sourceCoordinator) {
+//            WatermarkElement watermarkElement = new WatermarkElement(watermark);
+//            watermarks.put(key, watermarkElement);
+//
+//
+//            return Optional.of(combiner.combineWatermark(
+//                    watermark,
+//                    new WatermarkCombiner.Context() {
+//                        @Override
+//                        public int getNumberOfInputChannels() {
+//                            return combiner.getNumberOfInputChannels();
+//                        }
+//
+//                        @Override
+//                        public int getIndexOfCurrentChannel() {
+//                            System.out.println("JEYY " + this);
+//                            return combiner.getIndexOfCurrentChannel(sourceCoordinator);
+//                        }
+//                    }));
+//        }
+//
+//        @Override
+//        public Watermark getAggregatedWatermark() {
+//            return combiner.getAggregatedWatermark();
+//        }
+//
+//    }
 }
