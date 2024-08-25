@@ -30,6 +30,7 @@ import org.apache.flink.api.common.state.State;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
 import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.watermark.GeneralizedWatermark;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.configuration.MetricOptions;
 import org.apache.flink.core.fs.CloseableRegistry;
@@ -59,6 +60,7 @@ import org.apache.flink.streaming.runtime.tasks.ProcessingTimeService;
 import org.apache.flink.streaming.runtime.tasks.StreamTask;
 import org.apache.flink.streaming.runtime.watermarkstatus.WatermarkStatus;
 import org.apache.flink.streaming.util.LatencyStats;
+import org.apache.flink.util.FlinkRuntimeException;
 import org.apache.flink.util.Preconditions;
 
 import org.slf4j.Logger;
@@ -732,6 +734,11 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     @Experimental
+    public void processGeneralizedWatermark(GeneralizedWatermark watermark) throws Exception {
+        throw new FlinkRuntimeException("TODOJEY processGeneralizedWatermark");
+    }
+
+    @Experimental
     public void processRecordAttributes1(RecordAttributes recordAttributes) {
         lastRecordAttributes1 = recordAttributes;
         output.emitRecordAttributes(
@@ -747,5 +754,15 @@ public abstract class AbstractStreamOperator<OUT>
                 new RecordAttributesBuilder(
                                 Arrays.asList(lastRecordAttributes1, lastRecordAttributes2))
                         .build());
+    }
+
+    @Experimental
+    public void processGeneralizedWatermark1(GeneralizedWatermark watermark) {
+        throw new FlinkRuntimeException("TODOJEY processGeneralizedWatermark1");
+    }
+
+    @Experimental
+    public void processGeneralizedWatermark2(GeneralizedWatermark watermark) {
+        throw new FlinkRuntimeException("TODOJEY processGeneralizedWatermark2");
     }
 }

@@ -67,6 +67,8 @@ public class ProcessOperator<IN, OUT>
                         taskInfo.getMaxNumberOfParallelSubtasks(),
                         taskInfo.getTaskName(),
                         operatorContext.getMetricGroup());
+        outputCollector = getOutputCollector();
+        nonPartitionedContext = getNonPartitionedContext();
         partitionedContext =
                 new DefaultPartitionedContext(
                         context,
@@ -74,9 +76,8 @@ public class ProcessOperator<IN, OUT>
                         this::setCurrentKey,
                         getProcessingTimeManager(),
                         operatorContext,
-                        getOperatorStateBackend());
-        outputCollector = getOutputCollector();
-        nonPartitionedContext = getNonPartitionedContext();
+                        getOperatorStateBackend(),
+                        nonPartitionedContext);
     }
 
     @Override
@@ -104,6 +105,6 @@ public class ProcessOperator<IN, OUT>
 
     protected NonPartitionedContext<OUT> getNonPartitionedContext() {
         return new DefaultNonPartitionedContext<>(
-                context, partitionedContext, outputCollector, false, null);
+                context, partitionedContext, outputCollector, false, null, output);
     }
 }

@@ -31,6 +31,7 @@ import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.watermark.InternalWatermark;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.runtime.metrics.WatermarkGauge;
+import org.apache.flink.streaming.runtime.streamrecord.GeneralizedWatermarkEvent;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.RecordAttributes;
 import org.apache.flink.streaming.runtime.streamrecord.StreamElement;
@@ -243,6 +244,24 @@ public class RecordWriterOutput<OUT>
 
         try {
             serializationDelegate.setInstance(recordAttributes);
+            recordWriter.broadcastEmit(serializationDelegate);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    @Override
+    public void emitGeneralizedWatermark(GeneralizedWatermarkEvent watermark) {
+        if (!recordWriter.isSubpartitionDerivable()) {
+            LOG.warn(
+                    watermark
+                            + " will be ignored, because its correctness cannot not be "
+                            + "guaranteed when the subpartition information is not derivable.");
+            return;
+        }
+
+        try {
+            serializationDelegate.setInstance(watermark);
             recordWriter.broadcastEmit(serializationDelegate);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
