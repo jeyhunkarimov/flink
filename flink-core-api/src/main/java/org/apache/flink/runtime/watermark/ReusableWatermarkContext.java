@@ -16,23 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.flink.datastream.impl.watermark;
+package org.apache.flink.runtime.watermark;
 
-import org.apache.flink.api.watermark.GeneralizedWatermark;
-import org.apache.flink.api.watermark.WatermarkManager;
-import org.apache.flink.streaming.api.operators.Output;
-import org.apache.flink.streaming.runtime.streamrecord.GeneralizedWatermarkEvent;
+import org.apache.flink.annotation.Internal;
 
-public class DefaultWatermarkManager implements WatermarkManager {
+@Internal
+public class ReusableWatermarkContext
+        implements InternalWatermarkDeclaration.WatermarkCombiner.Context {
 
-    private final Output<?> streamRecordOutput;
+    private int numChannels;
+    private int currentChannel;
 
-    public DefaultWatermarkManager(Output<?> streamRecordOutput) {
-        this.streamRecordOutput = streamRecordOutput;
+    public ReusableWatermarkContext(int numChannels, int currentChannel) {
+        this.numChannels = numChannels;
+        this.currentChannel = currentChannel;
+    }
+
+    public void setChannelInfo(int numChannels, int currentChannel) {
+        this.numChannels = numChannels;
+        this.currentChannel = currentChannel;
     }
 
     @Override
-    public void emitWatermark(GeneralizedWatermark watermark) {
-        streamRecordOutput.emitGeneralizedWatermark(new GeneralizedWatermarkEvent(watermark));
+    public int getNumberOfInputChannels() {
+        return numChannels;
+    }
+
+    @Override
+    public int getIndexOfCurrentChannel() {
+        return currentChannel;
     }
 }

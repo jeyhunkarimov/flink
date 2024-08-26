@@ -26,6 +26,7 @@ import org.apache.flink.metrics.Counter;
 import org.apache.flink.runtime.execution.Environment;
 import org.apache.flink.runtime.io.network.partition.consumer.IndexedInputGate;
 import org.apache.flink.runtime.metrics.MetricNames;
+import org.apache.flink.runtime.watermark.InternalWatermarkDeclaration;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.Input;
 import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
@@ -57,6 +58,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.apache.flink.streaming.api.graph.StreamConfig.requiresSorting;
 import static org.apache.flink.util.Preconditions.checkNotNull;
@@ -196,6 +198,9 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
         TypeSerializer<IN> inSerializer =
                 configuration.getTypeSerializerIn1(getUserCodeClassLoader());
 
+        Set<InternalWatermarkDeclaration> watermarkDeclarationSet =
+                configuration.getWatermarkDeclarations(getUserCodeClassLoader());
+
         return StreamTaskNetworkInputFactory.create(
                 inputGate,
                 inSerializer,
@@ -209,7 +214,8 @@ public class OneInputStreamTask<IN, OUT> extends StreamTask<OUT, OneInputStreamO
                                 .get(gateIndex)
                                 .getPartitioner(),
                 getEnvironment().getTaskInfo(),
-                getCanEmitBatchOfRecords());
+                getCanEmitBatchOfRecords(),
+                watermarkDeclarationSet);
     }
 
     /**

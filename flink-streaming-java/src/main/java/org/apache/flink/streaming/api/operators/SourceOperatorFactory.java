@@ -174,7 +174,7 @@ public class SourceOperatorFactory<OUT> extends AbstractStreamOperatorFactory<OU
     }
 
     public Collection<? extends WatermarkDeclaration> getSourceWatermarkDeclarations() {
-        return (source != null && source instanceof DeclarableWatermark)
+        return (source != null && source instanceof DeclarableWatermark) // TODOJEY
                 ? ((DeclarableWatermark) source).watermarkDeclarations()
                 : Collections.emptySet();
     }

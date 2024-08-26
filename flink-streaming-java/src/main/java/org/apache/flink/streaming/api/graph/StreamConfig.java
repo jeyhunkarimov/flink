@@ -322,6 +322,24 @@ public class StreamConfig implements Serializable {
         setTypeSerializer(TYPE_SERIALIZER_SIDEOUT_PREFIX + outputTag.getId(), serializer);
     }
 
+    private void setTypeSerializer(String key, TypeSerializer<?> typeWrapper) {
+        toBeSerializedConfigObjects.put(key, typeWrapper);
+    }
+
+    public <T> TypeSerializer<T> getTypeSerializerSideOut(OutputTag<?> outputTag, ClassLoader cl) {
+        checkNotNull(outputTag, "Side output id must not be null.");
+        try {
+            return InstantiationUtil.readObjectFromConfig(
+                    this.config, TYPE_SERIALIZER_SIDEOUT_PREFIX + outputTag.getId(), cl);
+        } catch (Exception e) {
+            throw new StreamTaskException("Could not instantiate serializer.", e);
+        }
+    }
+
+    public void setWatermarkDeclarations(Set<WatermarkDeclaration> watermarkDeclarations) {
+        toBeSerializedConfigObjects.put(WATERMARK_DECLARATIONS, watermarkDeclarations);
+    }
+
     public Set<InternalWatermarkDeclaration> getWatermarkDeclarations(ClassLoader cl) {
         try {
             Set<WatermarkDeclaration> watermarkDeclarations =
@@ -339,24 +357,6 @@ public class StreamConfig implements Serializable {
         } catch (Exception e) {
             throw new StreamTaskException("Could not instantiate serializer.", e);
         }
-    }
-
-    private void setTypeSerializer(String key, TypeSerializer<?> typeWrapper) {
-        toBeSerializedConfigObjects.put(key, typeWrapper);
-    }
-
-    public <T> TypeSerializer<T> getTypeSerializerSideOut(OutputTag<?> outputTag, ClassLoader cl) {
-        checkNotNull(outputTag, "Side output id must not be null.");
-        try {
-            return InstantiationUtil.readObjectFromConfig(
-                    this.config, TYPE_SERIALIZER_SIDEOUT_PREFIX + outputTag.getId(), cl);
-        } catch (Exception e) {
-            throw new StreamTaskException("Could not instantiate serializer.", e);
-        }
-    }
-
-    public void setWatermarkDeclarations(Set<WatermarkDeclaration> watermarkDeclarations) {
-        toBeSerializedConfigObjects.put(WATERMARK_DECLARATIONS, watermarkDeclarations);
     }
 
     public void setupNetworkInputs(TypeSerializer<?>... serializers) {

@@ -18,6 +18,7 @@
 
 package org.apache.flink.streaming.util.watermark;
 
+import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.watermark.GeneralizedWatermark;
 import org.apache.flink.api.watermark.LongWatermarkDeclaration;
 import org.apache.flink.api.watermark.WatermarkDeclaration;
@@ -25,6 +26,7 @@ import org.apache.flink.datastream.watermark.DeclarableWatermark;
 import org.apache.flink.runtime.watermark.InternalLongWatermarkDeclaration;
 import org.apache.flink.runtime.watermark.InternalWatermarkDeclaration;
 import org.apache.flink.streaming.api.graph.StreamConfig;
+import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 
 import java.util.Collection;
@@ -37,9 +39,13 @@ public class WatermarkUtils {
 
     public static Collection<? extends WatermarkDeclaration> getWatermarkDeclarations(
             StreamOperator<?> streamOperator) {
-        return (streamOperator instanceof DeclarableWatermark)
-                ? ((DeclarableWatermark) streamOperator).watermarkDeclarations()
-                : Collections.emptySet();
+        if (streamOperator instanceof AbstractUdfStreamOperator) {
+            Function f = ((AbstractUdfStreamOperator<?, ?>) streamOperator).getUserFunction();
+            if (f instanceof DeclarableWatermark) {
+                return ((DeclarableWatermark) f).watermarkDeclarations();
+            }
+        }
+        return Collections.emptySet();
     }
 
     public static InternalWatermarkDeclaration convertToInternalWatermarkDeclaration(

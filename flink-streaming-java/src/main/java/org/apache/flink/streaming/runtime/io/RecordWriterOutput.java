@@ -27,6 +27,7 @@ import org.apache.flink.runtime.event.AbstractEvent;
 import org.apache.flink.runtime.io.network.api.CheckpointBarrier;
 import org.apache.flink.runtime.io.network.api.writer.RecordWriter;
 import org.apache.flink.runtime.plugable.SerializationDelegate;
+import org.apache.flink.runtime.watermark.InternalWatermarkDeclaration;
 import org.apache.flink.streaming.api.operators.Output;
 import org.apache.flink.streaming.api.watermark.InternalWatermark;
 import org.apache.flink.streaming.api.watermark.Watermark;
@@ -47,6 +48,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.apache.flink.util.Preconditions.checkNotNull;
 
@@ -73,12 +76,29 @@ public class RecordWriterOutput<OUT>
     // per-record path.
     private Counter numRecordsOut = new SimpleCounter();
 
+    private final List<InternalWatermarkDeclaration.WatermarkSerde> watermarkDeclarations;
+
     @SuppressWarnings("unchecked")
     public RecordWriterOutput(
             RecordWriter<SerializationDelegate<StreamRecord<OUT>>> recordWriter,
             TypeSerializer<OUT> outSerializer,
             OutputTag outputTag,
             boolean supportsUnalignedCheckpoints) {
+        this(
+                recordWriter,
+                outSerializer,
+                outputTag,
+                supportsUnalignedCheckpoints,
+                new ArrayList<>());
+    }
+
+    @SuppressWarnings("unchecked")
+    public RecordWriterOutput(
+            RecordWriter<SerializationDelegate<StreamRecord<OUT>>> recordWriter,
+            TypeSerializer<OUT> outSerializer,
+            OutputTag outputTag,
+            boolean supportsUnalignedCheckpoints,
+            List<InternalWatermarkDeclaration.WatermarkSerde> watermarkDeclarations) {
 
         checkNotNull(recordWriter);
         this.outputTag = outputTag;
@@ -88,13 +108,14 @@ public class RecordWriterOutput<OUT>
                 (RecordWriter<SerializationDelegate<StreamElement>>) (RecordWriter<?>) recordWriter;
 
         TypeSerializer<StreamElement> outRecordSerializer =
-                new StreamElementSerializer<>(outSerializer);
+                new StreamElementSerializer<>(outSerializer, watermarkDeclarations);
 
         if (outSerializer != null) {
             serializationDelegate = new SerializationDelegate<>(outRecordSerializer);
         }
 
         this.supportsUnalignedCheckpoints = supportsUnalignedCheckpoints;
+        this.watermarkDeclarations = watermarkDeclarations;
     }
 
     @Override
