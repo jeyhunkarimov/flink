@@ -18,8 +18,15 @@
 
 package org.apache.flink.runtime.watermark;
 
-import java.io.Serializable;
+public class DefaultIdentifiableWatermark implements IdentifiableWatermark {
+    protected final String watermarkIdentifier;
 
-public interface IdentifiableWatermark extends Serializable {
-    String getIdentifier();
+    public DefaultIdentifiableWatermark(String watermarkIdentifier) {
+        this.watermarkIdentifier = watermarkIdentifier;
+    }
+
+    @Override
+    public String getIdentifier() {
+        return watermarkIdentifier;
+    }
 }

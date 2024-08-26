@@ -18,8 +18,28 @@
 
 package org.apache.flink.runtime.watermark;
 
-import java.io.Serializable;
+import org.apache.flink.annotation.Internal;
+import org.apache.flink.api.watermark.WatermarkDeclaration;
 
-public interface IdentifiableWatermark extends Serializable {
-    String getIdentifier();
+import java.util.Optional;
+
+/** This class defines predefined {@link WatermarkDeclaration}s. */
+@Internal
+public class InternalLongWatermarkDeclaration extends DefaultIdentifiableWatermark
+        implements InternalWatermarkDeclaration {
+    private static final long serialVersionUID = 1L;
+
+    public InternalLongWatermarkDeclaration(String watermarkIdentifier) {
+        super(watermarkIdentifier);
+    }
+
+    @Override
+    public WatermarkSerde declaredWatermark() {
+        return new LongWatermarkSerde();
+    }
+
+    @Override
+    public Optional<WatermarkCombiner> watermarkCombiner() {
+        return Optional.of(new LongWatermarkCombiner());
+    }
 }

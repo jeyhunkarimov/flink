@@ -24,7 +24,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 /** Interface to expose {@link WatermarkDeclaration}s. */
-public interface DeclaratableWatermark {
+public interface DeclarableWatermark {
     /** Provide a Set of {@link WatermarkDeclaration} implementations. */
     default Collection<? extends WatermarkDeclaration> watermarkDeclarations() {
         return Collections.emptySet();

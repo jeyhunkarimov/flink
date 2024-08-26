@@ -18,8 +18,11 @@
 
 package org.apache.flink.runtime.watermark;
 
-import java.io.Serializable;
+import org.apache.flink.api.watermark.GeneralizedWatermark;
 
-public interface IdentifiableWatermark extends Serializable {
-    String getIdentifier();
+/*
+ * Wrapper on top of {@link DataOutput} to limit the emit process to only Watermarks.
+ */
+public interface WatermarkOutput {
+    void emitWatermark(GeneralizedWatermark watermark);
 }
