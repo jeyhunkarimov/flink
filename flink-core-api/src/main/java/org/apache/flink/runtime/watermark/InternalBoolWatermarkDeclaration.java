@@ -26,23 +26,24 @@ import java.util.Optional;
 
 /** This class defines predefined {@link WatermarkDeclaration}s. */
 @Internal
-public class InternalLongWatermarkDeclaration extends DefaultIdentifiableWatermark
+public class InternalBoolWatermarkDeclaration extends DefaultIdentifiableWatermark
         implements InternalWatermarkDeclaration {
     private static final long serialVersionUID = 1L;
-    private final WatermarkSpecs.NumericWatermarkComparison comparison;
+    private final WatermarkSpecs.BoolWatermarkComparison comparison;
 
-    public InternalLongWatermarkDeclaration(String watermarkIdentifier, WatermarkSpecs.NumericWatermarkComparison comparison) {
+
+    public InternalBoolWatermarkDeclaration(String watermarkIdentifier, WatermarkSpecs.BoolWatermarkComparison comparison) {
         super(watermarkIdentifier);
         this.comparison = comparison;
     }
 
     @Override
     public WatermarkSerde declaredWatermark() {
-        return new LongWatermarkSerde();
+        return new BoolWatermarkSerde();
     }
 
     @Override
     public Optional<WatermarkCombiner> watermarkCombiner() {
-        return Optional.of(new LongWatermarkCombiner(comparison));
+        return Optional.of(new BoolWatermarkCombiner(comparison));
     }
 }

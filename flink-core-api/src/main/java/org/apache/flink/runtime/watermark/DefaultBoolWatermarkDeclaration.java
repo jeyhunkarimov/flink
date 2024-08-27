@@ -19,30 +19,32 @@
 package org.apache.flink.runtime.watermark;
 
 import org.apache.flink.annotation.Internal;
-import org.apache.flink.api.watermark.WatermarkDeclaration;
+import org.apache.flink.api.watermark.BoolWatermarkDeclaration;
+import org.apache.flink.api.watermark.LongWatermarkDeclaration;
 import org.apache.flink.api.watermark.WatermarkSpecs;
 
-import java.util.Optional;
-
-/** This class defines predefined {@link WatermarkDeclaration}s. */
+/**
+ * This class defines watermark handling policy for ProcessOperator. Note that implementations of
+ * this interface must ensure to provide the default constructor.
+ */
 @Internal
-public class InternalLongWatermarkDeclaration extends DefaultIdentifiableWatermark
-        implements InternalWatermarkDeclaration {
-    private static final long serialVersionUID = 1L;
-    private final WatermarkSpecs.NumericWatermarkComparison comparison;
+public class DefaultBoolWatermarkDeclaration implements BoolWatermarkDeclaration {
+    private final WatermarkSpecs.BoolWatermarkComparison comparison;
+    private final String identifier;
 
-    public InternalLongWatermarkDeclaration(String watermarkIdentifier, WatermarkSpecs.NumericWatermarkComparison comparison) {
-        super(watermarkIdentifier);
+    public DefaultBoolWatermarkDeclaration(
+            WatermarkSpecs.BoolWatermarkComparison comparison, String identifier) {
         this.comparison = comparison;
+        this.identifier = identifier;
     }
 
     @Override
-    public WatermarkSerde declaredWatermark() {
-        return new LongWatermarkSerde();
+    public WatermarkSpecs.BoolWatermarkComparison getComparisonSemantics() {
+        return comparison;
     }
 
     @Override
-    public Optional<WatermarkCombiner> watermarkCombiner() {
-        return Optional.of(new LongWatermarkCombiner(comparison));
+    public String getIdentifier() {
+        return identifier;
     }
 }

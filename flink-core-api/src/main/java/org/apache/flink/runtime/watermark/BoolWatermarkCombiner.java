@@ -18,19 +18,21 @@
 
 package org.apache.flink.runtime.watermark;
 
+import org.apache.flink.api.watermark.BoolWatermark;
 import org.apache.flink.api.watermark.GeneralizedWatermark;
-import org.apache.flink.api.watermark.LongWatermark;
 import org.apache.flink.api.watermark.WatermarkSpecs;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class LongWatermarkCombiner implements InternalWatermarkDeclaration.WatermarkCombiner {
-    private final Map<Integer, Long> channelWatermarks = new HashMap<>();
-    private final WatermarkSpecs.NumericWatermarkComparison comparison;
+public class BoolWatermarkCombiner implements InternalWatermarkDeclaration.WatermarkCombiner {
+    private static final long serialVersionUID = 1L;
 
-    // Constructor to choose whether to use MAX or MIN operation
-    public LongWatermarkCombiner(WatermarkSpecs.NumericWatermarkComparison comparison) {
+    private final Map<Integer, Boolean> channelWatermarks = new HashMap<>();
+    private final WatermarkSpecs.BoolWatermarkComparison comparison;
+
+    // Constructor to choose whether to use OR or AND operation
+    public BoolWatermarkCombiner(WatermarkSpecs.BoolWatermarkComparison comparison) {
         this.comparison = comparison;
     }
 
@@ -40,27 +42,27 @@ public class LongWatermarkCombiner implements InternalWatermarkDeclaration.Water
             InternalWatermarkDeclaration.WatermarkCombiner.Context context,
             WatermarkOutput output)
             throws Exception {
-        assert (watermark instanceof LongWatermark);
+        assert (watermark instanceof BoolWatermark);
 
         // Get the current channel index and number of channels
         int currentChannelIndex = context.getIndexOfCurrentChannel();
         int numberOfInputChannels = context.getNumberOfInputChannels();
 
         // Update the watermark for the current channel
-        channelWatermarks.put(currentChannelIndex, ((LongWatermark) watermark).getValue());
-        boolean useMax = comparison == WatermarkSpecs.NumericWatermarkComparison.MAX;
-
+        channelWatermarks.put(currentChannelIndex, ((BoolWatermark) watermark).getValue());
+        boolean useOr = comparison == WatermarkSpecs.BoolWatermarkComparison.OR;
         // Check if we have received watermarks from all channels
         if (channelWatermarks.size() == numberOfInputChannels) {
-            // Calculate the combined watermark based on the useMax flag
-            long combinedWatermark = useMax ? Long.MIN_VALUE : Long.MAX_VALUE;
-            for (long wm : channelWatermarks.values()) {
-                combinedWatermark = useMax ? Math.max(combinedWatermark, wm) : Math.min(combinedWatermark, wm);
+            // Calculate the combined watermark based on the useOr flag
+            boolean combinedWatermark = !useOr;
+            for (boolean wm : channelWatermarks.values()) {
+                combinedWatermark = useOr ? (combinedWatermark || wm) : (combinedWatermark && wm);
             }
 
             // Emit the combined watermark
             output.emitWatermark(
-                    new LongWatermark(combinedWatermark, watermark.getIdentifier()));
+                    new BoolWatermark(combinedWatermark, watermark.getIdentifier()));
         }
     }
+
 }
