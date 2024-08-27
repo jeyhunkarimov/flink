@@ -19,6 +19,7 @@
 package org.apache.flink.api.watermark;
 
 import org.apache.flink.annotation.Experimental;
+import org.apache.flink.runtime.watermark.DefaultBoolWatermarkDeclaration;
 import org.apache.flink.runtime.watermark.DefaultLongWatermarkDeclaration;
 
 public class WatermarkDeclarations {
@@ -63,6 +64,31 @@ public class WatermarkDeclarations {
 
             public LongWatermarkDeclaration build() {
                 return new DefaultLongWatermarkDeclaration(watermarkComparison, watermarkID);
+            }
+        }
+
+        @Experimental
+        public static class BoolWatermarkBuilder {
+            private WatermarkSpecs.BoolWatermarkComparison watermarkComparison =
+                    WatermarkSpecs.BoolWatermarkComparison.OR;
+            private final String watermarkID;
+
+            public BoolWatermarkBuilder(String watermarkID) {
+                this.watermarkID = watermarkID;
+            }
+
+            public BoolWatermarkBuilder combinerOR() {
+                this.watermarkComparison = WatermarkSpecs.BoolWatermarkComparison.OR;
+                return this;
+            }
+
+            public BoolWatermarkBuilder combinerAND() {
+                this.watermarkComparison = WatermarkSpecs.BoolWatermarkComparison.AND;
+                return this;
+            }
+
+            public BoolWatermarkDeclaration build() {
+                return new DefaultBoolWatermarkDeclaration(watermarkComparison, watermarkID);
             }
         }
     }

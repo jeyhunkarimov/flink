@@ -21,13 +21,32 @@ package org.apache.flink.api.watermark;
 import org.apache.flink.annotation.Experimental;
 
 /**
- * This class defines watermark handling policy for ProcessOperator. Note that implementations of
- * this interface must ensure to provide the default constructor.
+ * The {@link LongWatermarkDeclaration} interface extends the {@code WatermarkDeclaration} interface
+ * and provides additional functionality specific to long-type watermarks. It includes methods for
+ * obtaining comparison semantics and creating new long watermarks.
+ *
+ * <p>Implementing classes should provide a concrete implementation of the {@code
+ * getComparisonSemantics} method to define how watermarks are compared.
+ *
+ * @see WatermarkDeclaration
  */
 @Experimental
 public interface LongWatermarkDeclaration extends WatermarkDeclaration {
+
+    /**
+     * Returns the numeric comparison semantics.
+     *
+     * @return a {@code WatermarkSpecs.NumericWatermarkComparison} representing the comparison
+     *     semantics for long watermarks
+     */
     WatermarkSpecs.NumericWatermarkComparison getComparisonSemantics();
 
+    /**
+     * Creates a new {@code LongWatermark} with the specified value.
+     *
+     * @param val the long value for the new watermark
+     * @return a new instance of {@code LongWatermark} with the specified value
+     */
     default LongWatermark newWatermark(long val) {
         return new LongWatermark(val, this.getIdentifier());
     }

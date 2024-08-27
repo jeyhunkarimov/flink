@@ -20,6 +20,21 @@ package org.apache.flink.runtime.watermark;
 
 import java.io.Serializable;
 
+/**
+ * The {@link IdentifiableWatermark} interface represents a watermark that can be identified by a
+ * unique identifier.
+ *
+ * <p>Implementing classes should provide a concrete implementation of the {@code getIdentifier}
+ * method to return a unique identifier for the watermark.
+ *
+ * @see Serializable
+ */
 public interface IdentifiableWatermark extends Serializable {
+
+    /**
+     * Returns the unique identifier for this watermark.
+     *
+     * @return a {@code String} representing the unique identifier of the watermark
+     */
     String getIdentifier();
 }

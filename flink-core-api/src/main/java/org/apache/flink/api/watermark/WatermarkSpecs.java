@@ -20,24 +20,39 @@ package org.apache.flink.api.watermark;
 
 import org.apache.flink.annotation.Experimental;
 
-/** Defines the comparison semantics among {@link Watermark}. */
+/**
+ * The {@link WatermarkSpecs} class defines the comparison semantics among {@link
+ * GeneralizedWatermark}s. It includes enumerations for specifying different types of watermark
+ * comparisons and watermark types.
+ *
+ * @see GeneralizedWatermark
+ */
 @Experimental
 public final class WatermarkSpecs {
 
+    /**
+     * The {@link BoolWatermarkComparison} enum defines the comparison semantics for boolean
+     * watermarks. It includes logical operations such as {@code OR} and {@code AND}.
+     */
     @Experimental
     public enum BoolWatermarkComparison {
+        /** Logical OR comparison for boolean watermarks. */
         OR,
+
+        /** Logical AND comparison for boolean watermarks. */
         AND
     }
 
+    /**
+     * The {@link NumericWatermarkComparison} enum defines the comparison semantics for numeric
+     * watermarks. It includes operations such as {@code MIN} and {@code MAX}.
+     */
     @Experimental
     public enum NumericWatermarkComparison {
+        /** Minimum value comparison for numeric watermarks. */
         MIN,
-        MAX
-    }
 
-    @Experimental
-    public enum WatermarkType {
-        LONG
+        /** Maximum value comparison for numeric watermarks. */
+        MAX
     }
 }

@@ -22,21 +22,45 @@ import org.apache.flink.annotation.Experimental;
 
 import java.util.Objects;
 
+/**
+ * The {@link BoolWatermark} represents a watermark with a boolean value and an associated
+ * identifier.
+ *
+ * @see GeneralizedWatermark
+ */
 @Experimental
 public class BoolWatermark implements GeneralizedWatermark {
     private static final long serialVersionUID = 1L;
     private final boolean value;
     private final String identifier;
 
+    /**
+     * Constructs a new {@code BoolWatermark} with the specified boolean value and identifier.
+     *
+     * @param value the boolean value of the watermark
+     * @param identifier the unique identifier associated with this watermark
+     */
     public BoolWatermark(boolean value, String identifier) {
         this.value = value;
         this.identifier = identifier;
     }
 
+    /**
+     * Returns the boolean value of this watermark.
+     *
+     * @return the boolean value
+     */
     public boolean getValue() {
         return value;
     }
 
+    /**
+     * Determines whether this watermark is equal to another object.
+     *
+     * @param o the object to compare for equality
+     * @return {@code true} if the specified object is equal to this watermark; {@code false}
+     *     otherwise
+     */
     @Override
     public boolean equals(Object o) {
         return this == o
@@ -46,16 +70,31 @@ public class BoolWatermark implements GeneralizedWatermark {
                         && Objects.equals(((BoolWatermark) o).identifier, this.identifier);
     }
 
+    /**
+     * Returns the hash code value for this watermark.
+     *
+     * @return the hash code value
+     */
     @Override
     public int hashCode() {
         return Objects.hash(value, identifier);
     }
 
+    /**
+     * Returns a string representation of this watermark.
+     *
+     * @return a string representation of the watermark, including its value and identifier
+     */
     @Override
     public String toString() {
         return "BoolWatermark @ " + value + " @ " + identifier;
     }
 
+    /**
+     * Returns the identifier associated with this watermark.
+     *
+     * @return the identifier
+     */
     @Override
     public String getIdentifier() {
         return identifier;

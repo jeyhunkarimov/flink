@@ -21,13 +21,35 @@ package org.apache.flink.api.watermark;
 import org.apache.flink.annotation.Experimental;
 
 /**
- * This class defines watermark handling policy for ProcessOperator. Note that implementations of
- * this interface must ensure to provide the default constructor.
+ * The {@link BoolWatermarkDeclaration} interface extends the {@code WatermarkDeclaration} interface
+ * and provides additional functionality specific to boolean-type watermarks. It includes methods
+ * for obtaining comparison semantics and creating new boolean watermarks.
+ *
+ * <p>This interface is marked as {@code Experimental}, indicating that it may change in future
+ * releases.
+ *
+ * <p>Implementing classes should provide a concrete implementation of the {@code
+ * getComparisonSemantics} method to define how boolean watermarks are compared.
+ *
+ * @see WatermarkDeclaration
  */
 @Experimental
 public interface BoolWatermarkDeclaration extends WatermarkDeclaration {
+
+    /**
+     * Returns the boolean comparison semantics for watermarks.
+     *
+     * @return a {@code WatermarkSpecs.BoolWatermarkComparison} representing the comparison
+     *     semantics for bool watermarks
+     */
     WatermarkSpecs.BoolWatermarkComparison getComparisonSemantics();
 
+    /**
+     * Creates a new {@code BoolWatermark} with the specified boolean value.
+     *
+     * @param val the boolean value for the new watermark
+     * @return a new instance of {@code BoolWatermark} with the specified boolean value
+     */
     default BoolWatermark newWatermark(boolean val) {
         return new BoolWatermark(val, this.getIdentifier());
     }

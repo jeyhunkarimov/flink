@@ -22,9 +22,9 @@ import org.apache.flink.api.watermark.GeneralizedWatermark;
 
 import java.util.Objects;
 
-/** TODOJEY. */
+/** Wrapper on top of {@link GeneralizedWatermark} to use it as a {@link StreamElement}. */
 @Experimental
-public class GeneralizedWatermarkEvent extends StreamElement {
+public final class GeneralizedWatermarkEvent extends StreamElement {
 
     private GeneralizedWatermark watermark;
 

@@ -22,8 +22,8 @@ import org.apache.flink.annotation.Experimental;
 import org.apache.flink.runtime.watermark.IdentifiableWatermark;
 
 /**
- * This class defines watermark handling policy for ProcessOperator. Note that implementations of
- * this interface must ensure to provide the default constructor.
+ * This class defines watermark handling policy. Note that implementations of this interface must
+ * ensure to provide the default constructor.
  */
 @Experimental
 public interface WatermarkDeclaration extends IdentifiableWatermark {}

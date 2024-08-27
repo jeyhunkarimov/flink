@@ -16,7 +16,7 @@ limitations under the License.
 
 package org.apache.flink.api.watermark;
 
-import org.apache.flink.annotation.Public;
+import org.apache.flink.annotation.Experimental;
 import org.apache.flink.runtime.watermark.IdentifiableWatermark;
 
 /**
@@ -24,5 +24,5 @@ import org.apache.flink.runtime.watermark.IdentifiableWatermark;
  * is an abstract term. There can be different implementations of {@link GeneralizedWatermark} to
  * show the concrete indicator.
  */
-@Public
+@Experimental
 public interface GeneralizedWatermark extends IdentifiableWatermark {}
