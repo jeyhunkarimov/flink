@@ -25,7 +25,6 @@ import org.apache.flink.core.memory.DataOutputView;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Optional;
 
 /**
  * This class defines watermark handling policy for ProcessOperator. Note that implementations of
@@ -38,7 +37,7 @@ public interface InternalWatermarkDeclaration extends IdentifiableWatermark {
     WatermarkSerde declaredWatermark();
 
     /** Returns user-defined Watermark combiner implementation. */
-    Optional<WatermarkCombiner> watermarkCombiner();
+    WatermarkCombiner watermarkCombiner();
 
     /**
      * Declaration for Watermark classes. Note that the subclasses of this interface should ensure

@@ -22,8 +22,6 @@ import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.watermark.WatermarkDeclaration;
 import org.apache.flink.api.watermark.WatermarkSpecs;
 
-import java.util.Optional;
-
 /** This class defines predefined {@link WatermarkDeclaration}s. */
 @Internal
 public class InternalLongWatermarkDeclaration extends DefaultIdentifiableWatermark
@@ -31,7 +29,8 @@ public class InternalLongWatermarkDeclaration extends DefaultIdentifiableWaterma
     private static final long serialVersionUID = 1L;
     private final WatermarkSpecs.NumericWatermarkComparison comparison;
 
-    public InternalLongWatermarkDeclaration(String watermarkIdentifier, WatermarkSpecs.NumericWatermarkComparison comparison) {
+    public InternalLongWatermarkDeclaration(
+            String watermarkIdentifier, WatermarkSpecs.NumericWatermarkComparison comparison) {
         super(watermarkIdentifier);
         this.comparison = comparison;
     }
@@ -42,7 +41,7 @@ public class InternalLongWatermarkDeclaration extends DefaultIdentifiableWaterma
     }
 
     @Override
-    public Optional<WatermarkCombiner> watermarkCombiner() {
-        return Optional.of(new LongWatermarkCombiner(comparison));
+    public WatermarkCombiner watermarkCombiner() {
+        return new LongWatermarkCombiner(comparison);
     }
 }

@@ -20,7 +20,6 @@ package org.apache.flink.runtime.watermark;
 
 import org.apache.flink.annotation.Internal;
 import org.apache.flink.api.watermark.BoolWatermarkDeclaration;
-import org.apache.flink.api.watermark.LongWatermarkDeclaration;
 import org.apache.flink.api.watermark.WatermarkSpecs;
 
 /**

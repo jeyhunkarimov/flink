@@ -60,9 +60,7 @@ public class BoolWatermarkCombiner implements InternalWatermarkDeclaration.Water
             }
 
             // Emit the combined watermark
-            output.emitWatermark(
-                    new BoolWatermark(combinedWatermark, watermark.getIdentifier()));
+            output.emitWatermark(new BoolWatermark(combinedWatermark, watermark.getIdentifier()));
         }
     }
-
 }

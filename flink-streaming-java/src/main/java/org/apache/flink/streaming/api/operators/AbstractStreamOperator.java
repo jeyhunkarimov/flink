@@ -52,6 +52,7 @@ import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.StreamOperatorStateHandler.CheckpointedStreamOperator;
 import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamrecord.GeneralizedWatermarkEvent;
 import org.apache.flink.streaming.runtime.streamrecord.LatencyMarker;
 import org.apache.flink.streaming.runtime.streamrecord.RecordAttributes;
 import org.apache.flink.streaming.runtime.streamrecord.RecordAttributesBuilder;
@@ -734,8 +735,8 @@ public abstract class AbstractStreamOperator<OUT>
     }
 
     @Experimental
-    public void processGeneralizedWatermark(GeneralizedWatermark watermark) throws Exception {
-        throw new FlinkRuntimeException("TODOJEY processGeneralizedWatermark");
+    public void processGeneralizedWatermark(GeneralizedWatermarkEvent watermark) throws Exception {
+        output.emitGeneralizedWatermark(watermark);
     }
 
     @Experimental

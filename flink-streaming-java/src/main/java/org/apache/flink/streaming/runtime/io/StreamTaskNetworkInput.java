@@ -98,6 +98,7 @@ public final class StreamTaskNetworkInput<T>
                 canEmitBatchOfRecords,
                 watermarkDeclarationSet);
     }
+
     // Initialize one deserializer per input channel
     private static Map<
                     InputChannelInfo,

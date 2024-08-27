@@ -129,12 +129,8 @@ public abstract class AbstractStreamTaskNetworkInput<
                 new ReusableWatermarkContext(flattenedChannelIndices.size(), 0);
 
         for (InternalWatermarkDeclaration watermarkDeclaration : watermarkDeclarationSet) {
-            watermarkDeclaration
-                    .watermarkCombiner()
-                    .ifPresent(
-                            combiner ->
-                                    watermarkCombiners.put(
-                                            watermarkDeclaration.getIdentifier(), combiner));
+            watermarkCombiners.put(
+                    watermarkDeclaration.getIdentifier(), watermarkDeclaration.watermarkCombiner());
         }
     }
 
@@ -252,7 +248,8 @@ public abstract class AbstractStreamTaskNetworkInput<
                             // map entry
                         } else {
                             throw new FlinkRuntimeException(
-                                    "Unknown watermark identifier " + genericWatermark.getIdentifier());
+                                    "Unknown watermark identifier "
+                                            + genericWatermark.getIdentifier());
                         }
                     });
             return true;

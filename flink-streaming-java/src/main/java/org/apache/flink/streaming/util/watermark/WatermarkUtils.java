@@ -20,22 +20,17 @@ package org.apache.flink.streaming.util.watermark;
 
 import org.apache.flink.api.common.functions.Function;
 import org.apache.flink.api.watermark.BoolWatermarkDeclaration;
-import org.apache.flink.api.watermark.GeneralizedWatermark;
 import org.apache.flink.api.watermark.LongWatermarkDeclaration;
 import org.apache.flink.api.watermark.WatermarkDeclaration;
 import org.apache.flink.datastream.watermark.DeclarableWatermark;
 import org.apache.flink.runtime.watermark.InternalBoolWatermarkDeclaration;
 import org.apache.flink.runtime.watermark.InternalLongWatermarkDeclaration;
 import org.apache.flink.runtime.watermark.InternalWatermarkDeclaration;
-import org.apache.flink.streaming.api.graph.StreamConfig;
 import org.apache.flink.streaming.api.operators.AbstractUdfStreamOperator;
 import org.apache.flink.streaming.api.operators.StreamOperator;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
 
 public class WatermarkUtils {
 
@@ -53,33 +48,16 @@ public class WatermarkUtils {
     public static InternalWatermarkDeclaration convertToInternalWatermarkDeclaration(
             WatermarkDeclaration watermarkDeclaration) {
         if (watermarkDeclaration instanceof LongWatermarkDeclaration) {
-            return new InternalLongWatermarkDeclaration(watermarkDeclaration.getIdentifier(), ((LongWatermarkDeclaration) watermarkDeclaration).getComparisonSemantics());
+            return new InternalLongWatermarkDeclaration(
+                    watermarkDeclaration.getIdentifier(),
+                    ((LongWatermarkDeclaration) watermarkDeclaration).getComparisonSemantics());
         } else if (watermarkDeclaration instanceof BoolWatermarkDeclaration) {
-            return new InternalBoolWatermarkDeclaration(watermarkDeclaration.getIdentifier(), ((BoolWatermarkDeclaration) watermarkDeclaration).getComparisonSemantics());
+            return new InternalBoolWatermarkDeclaration(
+                    watermarkDeclaration.getIdentifier(),
+                    ((BoolWatermarkDeclaration) watermarkDeclaration).getComparisonSemantics());
         } else {
             throw new UnsupportedOperationException(
                     "Unsupported watermark declaration: " + watermarkDeclaration);
         }
-    }
-
-    public static Map<
-                    Class<? extends GeneralizedWatermark>,
-                    InternalWatermarkDeclaration.WatermarkCombiner>
-            deriveWatermarkCombinerMap(StreamConfig streamConfig, ClassLoader userClassloader) {
-        Set<InternalWatermarkDeclaration> watermarkDeclarations =
-                streamConfig.getWatermarkDeclarations(userClassloader);
-        Map<Class<? extends GeneralizedWatermark>, InternalWatermarkDeclaration.WatermarkCombiner>
-                watermarkCombinerMap = new HashMap<>();
-        for (InternalWatermarkDeclaration watermarkDeclaration : watermarkDeclarations) {
-            watermarkDeclaration
-                    .watermarkCombiner()
-                    .ifPresent(
-                            combiner -> {
-                                watermarkCombinerMap.put(
-                                        watermarkDeclaration.declaredWatermark().watermarkClass(),
-                                        combiner);
-                            });
-        }
-        return watermarkCombinerMap;
     }
 }

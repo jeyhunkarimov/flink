@@ -63,7 +63,10 @@ public class GeneralizedWatermarkITCase {
         nonKeyedPartitionStream =
                 env.fromSource(
                         DataStreamV2SourceUtils.fromData(
-                                Arrays.asList(new Tweet("t1", 1), new Tweet("t2", 2))),
+                                Arrays.asList(
+                                        new Tweet("t1", 1),
+                                        new Tweet("t2", 2),
+                                        new Tweet("t3", 3))),
                         "test-source");
     }
 
@@ -167,6 +170,7 @@ public class GeneralizedWatermarkITCase {
             // This PF only handles watermarks with the target ID
             if (watermark instanceof LongWatermark
                     && watermark.getIdentifier().equals(NEWEST_TWEET_TIME_WM_ID)) {
+                System.out.println(((LongWatermark) watermark).getValue());
                 // remove cached tweets 5 minutes earlier than th newest
                 cachedTweetsByTopic.forEach(
                         (topic, tweetsInOrder) -> {

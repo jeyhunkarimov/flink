@@ -55,12 +55,12 @@ public class LongWatermarkCombiner implements InternalWatermarkDeclaration.Water
             // Calculate the combined watermark based on the useMax flag
             long combinedWatermark = useMax ? Long.MIN_VALUE : Long.MAX_VALUE;
             for (long wm : channelWatermarks.values()) {
-                combinedWatermark = useMax ? Math.max(combinedWatermark, wm) : Math.min(combinedWatermark, wm);
+                combinedWatermark =
+                        useMax ? Math.max(combinedWatermark, wm) : Math.min(combinedWatermark, wm);
             }
 
             // Emit the combined watermark
-            output.emitWatermark(
-                    new LongWatermark(combinedWatermark, watermark.getIdentifier()));
+            output.emitWatermark(new LongWatermark(combinedWatermark, watermark.getIdentifier()));
         }
     }
 }
